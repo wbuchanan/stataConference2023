@@ -1,0 +1,27 @@
+infix dictionary using sampleFile.txt {
+	long var1 1-10
+	str var2 11-12
+	str var3 13-14
+	str var4 15-28
+	str var5 29-48
+	str var6 49-68
+	str var7 69-83
+	str var8 84-98
+	str var9 99-113
+	str var10 114-128
+	str var11 129-143
+	str var12 144-158
+	str var13 159-173
+	str var14 174-188
+	str var15 189-203
+	str var16 204-218
+	str var17 219-233
+	str var18 234-248
+	str var19 249-263
+	str var20 264-278
+	str var21 279-293
+	str var22 294-294
+	str var23 295-494
+	long var24 495-504
+}
+

@@ -1,0 +1,3079 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+	<meta charset="utf-8">
+
+	<title>Stata Conference 2023 - Metaprogramming</title>
+
+	<meta name="description" content="Talk about Metaprogramming in Stata">
+	<meta name="author" content="William Buchanan">
+
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+	<link rel="stylesheet" href="dist/reset.css">
+	<link rel="stylesheet" href="dist/reveal.css">
+	<link rel="stylesheet" href="dist/theme/black.css" id="theme">
+
+	<!-- Theme used for syntax highlighting of code -->
+	<link rel="stylesheet" href="plugin/highlight/monokai.css">
+
+	<style>
+		.tex sub, .latex sub, .latex sup {
+			text-transform: uppercase;
+		}
+
+		.tex sub, .latex sub {
+			vertical-align: -0.5ex;
+			margin-left: -0.1667em;
+			margin-right: -0.125em;
+		}
+
+		.tex, .latex, .tex sub, .latex sub {
+			font-size: 1em;
+		}
+
+		.latex sup {
+			font-size: 0.85em;
+			vertical-align: 0.15em;
+			margin-left: -0.36em;
+			margin-right: -0.15em;
+		}
+	</style>
+</head>
+
+<body>
+
+<div class="reveal">
+	<div class="slides">
+		<section>
+			<h2>Metaprogramming</h2>
+			<h3>What it is, how to use it, and why you should care</h3>
+			<h4><a href="https://github.com/wbuchanan" target="_blank">Billy Buchanan</a></h4>
+			<h4 style="margin-bottom: 0;">Sr Research Scientist, <a href="https://www.sagcorp.com" target="_blank">SAG Corporation</a></h4>
+			<span style="margin-top: -25%;">
+				<img src="img/saglogo.png" alt="Logo for SAG Corporation" width="150px">
+				<img src="img/sdvosblogo.png" alt="Service Disabled Veteran Owned Small Business Emblem" width="100px">
+			</span>
+			<p style="margin-top: -2.5%;">Slides available at: <a href="https://wbuchanan.github.io/stataConference2023" target="_blank">https://wbuchanan.github.io/stataConference2023</a></p>
+			<aside class="notes">
+				<p>Disclaimer: These are my personal views and do not reflect any official views or positions of my employer or any of our clients.</p>
+			</aside>
+		</section>
+		<section>
+			<section>
+				<h2>What it is</h2>
+				<aside class="notes">
+					<ul>
+						<li>Stata Linter is likely an example of a meta-program for static code analysis</li>
+						<li>Please raise your hand if you are already familiar with metaprogramming.</li>
+						<li>Please raise your hand if you've ever used `estout` to create tables in LaTeX.</li>
+						<li>Please raise your hand if you've ever created a Mata library or saved Mata code in a .mo file.</li>
+					</ul>
+				</aside>
+			</section>
+			<section>
+				<ul>
+					<li>Programs that write or modify programs</li>
+					<li>Inputs are data, metadata, and/or sourcecode</li>
+					<li>Processes Concept Classes used <a href="https://www.researchgate.net/publication/267704068_Taxonomy_of_The_Fundamental_Concepts_of_Meta-Programming" target="_blank">(see Damaševičius &amp; Štuikys, 2008 for details)</a>:</li>
+					<ul>
+						<li>Code Generation</li>
+						<li>Transformation</li>
+						<li>Reflection</li>
+						<li>Generalization</li>
+					</ul>
+					<li>Output is static or dynamic</li>
+				</ul>
+				<aside class="notes">
+					<ul>
+						<li>In Stata the first three process concept classes are most likely.</li>
+						<li>Code generation can be static or dynamic. Mata compiler = static. Dynamic is more constructing and executing code at runtime.</li>
+						<li>Transformation is when the program modifies its behavior or output based on input and logic statements</li>
+						<li>Reflection is when the program inspects its own properties, or the properties of the input, to modify its behavior or output</li>
+						<li>Generalization can be based on the use of generics (Java) or templates (C++); think transmorphic classes in Mata.</li>
+						<li>A lot of this functionality can be implemented in one way or another using macros in Stata or Mata objects/variables.</li>
+					</ul>
+				</aside>
+			</section>
+			<section data-autoslide="3500">
+				<h2>How is it implemented in Stata?</h2>
+			</section>
+			<section>
+				<h2>Macros</h2>
+				<ul>
+					<li>Macros can be used to compose syntax</li>
+					<li>Evaluation of macros enables flexible composition</li>
+					<li>Control evaluation with \ or <code>macval()</code></li>
+					<li>Access metadata with extended macro functions</li>
+				</ul>
+				<aside class="notes">
+					<ul>
+						<li>Macros are basically the secret sauce of metaprogramming in Stata</li>
+						<li>Since macros can store strings and contain references to other macros themselves, you can use them to compose new syntax.</li>
+						<li>It is possible to compose complex code by controlling evaluation</li>
+						<li>Remember local macros are evaluated from the inside out and globals are evaluated from left to right, unless using curly braces.</li>
+						<li>The macval() function will expand the outer macro while leaving the inner macro in place</li>
+						<li>Pseudo-reflection can be implemented by accessing metadata</li>
+					</ul>
+				</aside>
+			</section>
+			<section>
+				<h2>Mata Strings</h2>
+				<ul>
+					<li>Use string variables to create and modify syntax</li>
+					<li>Incorporate values stored in Stata macros as needed</li>
+					<li>Mata function <code>stata()</code> can execute your code</li>
+					<li><b>Mata classes persist across Stata commands</b></li>
+				</ul>
+				<aside class="notes">
+					<ul>
+						<li>The last point is important.</li>
+						<li>While local macros vanish outside their scope, or get overwritten by other commands, the same is not true for a Mata class you define.</li>
+						<li>Using a Mata class allows you to persist some information in memory while also being able to add new information at runtime.</li>
+						<li>I'll show an example using a Mata class in a bit.</li>
+					</ul>
+				</aside>
+			</section>
+		</section>
+		<section>
+			<section data-autoslide="3500">
+				<h2>How to use it</h2>
+			</section>
+			<section>
+				<h2>Dynamic Code Generation</h2>
+				<pre data-id="dynamic-animation" style="width: 65vw; height: 125%; margin-left: -5%;">
+					<code class="hljs" data-trim data-line-numbers="167-179|181-196|272-294">
+						<script type="text/template">
+mata
+
+// Clears objects, methods, and functions from Mata
+mata clear
+
+/*
+Defines a struct object used by the commands in drb.ado to store/persist info
+across the user session.
+*/
+class Drbs {
+
+	// Defines any public member variables or methods
+	public:
+
+	void new(), makefr(), drbstore(), vallabs()
+
+	// Stores a column vector containing the values of the disclosure variable
+	string colvector values
+
+	// Stores a column vector containing the values used to construct the
+	// coeflegend values
+	string colvector fvstubs
+
+	// Stores a column vector containing the values used to access the cell size
+	// macros
+	string colvector csnames
+
+	// Stores a column vector containing all of the coef/SE references
+	string colvector bse
+
+	// Stores a column vector with the names of the variables in the storage
+	// frame
+	string colvector stovar
+
+	// Stores the value labels associated with the focal variable
+	string colvector vallab
+
+	// Stores the values corresponding to the labels associated with the
+	// focal variable
+	real colvector labval
+
+	// Stores the name of the variable with values that will have coefficients
+	string scalar drbvar
+
+	// Stores the string
+	string scalar cspref
+
+	// Stores the string that defines the frame where results are stored
+	string scalar frdef
+
+	// Stores the string used to store the results in the frame defined by frdef
+	string scalar store
+
+	// Stores the name of the frame where results get stored
+	string scalar frname
+
+	// The name of the frame when initialized
+	string scalar stframe
+
+	// Stores the number of unique values in the values member
+	real scalar levs
+
+	// The name of the directory where output will be saved
+	string scalar outdir
+
+	// Stores the name of the value labels associated with the focal variable
+	string scalar vallabname
+
+	// Stores the variable label for the variable of interest
+	string scalar varlabel
+
+} // End of struct definition
+
+/*
+Object constructor function that initializes the object and populates member
+variables by extracting the unique levels of the variable that will have
+coefficients disclosed and for which cell sizes are needed.
+@returns void.  It initializes the object when instantiated
+*/
+void Drbs::new() {
+
+	// Initialize the column vectors that will store the values and labels for
+	// the focal variable
+	this.vallab = J(0, 1, "")
+	this.labval = J(0, 1, .)
+
+	// Stores the name of the focal variable
+	this.drbvar = st_local("varlist")
+
+	// Stores the name of the variable label associated with the focal variable
+	this.vallabname = st_varvaluelabel(this.drbvar)
+
+	// Test if there is a value label associated with the focal variable
+	// If there is a value label associated with the variable store the mapping
+	// so it can be reconstructed later
+	if (this.vallabname != "" ) st_vlload(this.vallabname, this.labval, this.vallab)
+
+	// Stores string representation of all the values of the variable except for
+	// the reference group
+	this.values = strofreal(uniqrows(st_data(., st_local("varlist"), st_local("touse"))))
+
+	// Stores the total number of unique values used for iteration later
+	this.levs = rows(this.values)
+
+	// Stores the name of the frame where results will be stored
+	this.frname = st_local("framename")
+
+	// Stores the name of the frame when function is called/struct initialized
+	this.stframe = st_framecurrent()
+
+	// Stores the factor variable expansion used to reference coefs/SEs
+	this.fvstubs = this.values + J(this.levs, 1, "." + this.drbvar)
+
+	// Stores all of the coefficient legend references to the coefficients and
+	// standard errors to construct the string used to store the results in the
+	// storage frame
+	this.bse = (J(this.levs, 1, "_b[") + this.fvstubs + J(this.levs, 1, "]") \ ///
+	J(this.levs, 1, "_se[") + this.fvstubs + J(this.levs, 1, "]"))
+
+	// Stores a column vector with all variable names for the storage frame
+	this.stovar = ( J(this.levs, 1, "b") + this.values \ 				 ///
+	J(this.levs, 1, "se") + this.values \ 			 ///
+	J(this.levs, 1, "n") + this.values )
+
+	// Creates the references to the names that will be used to store the cell
+	// size values
+	this.csnames = ( J(this.levs, 1, this.drbvar) + this.values )
+
+	// Stores the directory where the output will be saved in the outdir member
+	// variable of the struct
+	this.outdir = st_local("outdir")
+
+	// Stores the variable label for the variable of interest
+	this.varlabel = st_varlabel(this.drbvar)
+
+	// Calls the method used to define the frame where results will be stored
+	// and constructs the storage frame
+	this.makefr()
+
+	// Creates the string used to store the model results and cell sizes using
+	// the store subroutine of the drb command
+	this.coefrefs()
+
+} // End of drbvar function definition
+
+/*
+Drbs object method used to reconstruct the value label associated with the
+focal variable prior to writing the results to a file
+@returns void.  Defines a value label in Stata that can be applied to a variable.
+*/
+void Drbs::vallabs() {
+
+	// Reconstructs the value label for the focal variable
+	st_vlmodify(this.vallabname, this.labval, this.vallab)
+
+	// Add a local with the label name
+	st_local("labname", this.vallabname)
+
+} // End of vallabs method
+
+/*
+Mata function that creates the string defining the structure of the frame where
+results will be posted
+@param drbvals The string matrix returned by drbvar()
+@returns A string scalar containing the syntax to pop
+*/
+void Drbs::makefr() {
+
+	// Declares two scalars to use to iterate over the values and for each of
+	// the types of results that need to be stored
+	real scalar i, j
+
+	// Creates the string that defines the frame that stores all of the results
+	// will also store the command line that fitted the model
+	this.frdef = "frame create " + this.frname + " int(dc) " + 			 ///
+	"str2045(model) str2045(cmd) double("
+
+	// Sets a scalar to ID the point where the type needs to change to long
+	i = (this.levs * 2) + 1
+
+	// Loops over the vector containing the variable names.
+	for(j = 1; j <= rows(this.stovar); j++) {
+
+		// If this iteration is the first cell size, change the storage type
+		if(j == i) this.frdef = this.frdef + ") long(" + this.stovar[j, 1] + " "
+
+		// For all others
+		else this.frdef = this.frdef + this.stovar[j, 1] + " "
+
+	} // End Loop to define storage for coefs/SEs/cell sizes
+
+	// Adds the closing parentheses for the frame definition string
+	this.frdef = this.frdef + ")"
+
+	// Create the frame to store the results
+	stata(this.frdef)
+
+} // End makefr function definition
+
+/*
+Definies a member function used to store the estimation results and corresponding
+cell sizes.
+@returns Void.  All results are stored in the frame initialized by the drbs
+object.
+*/
+void Drbs::drbstore() {
+
+	// Declare variable to count the number of observations for the levels of
+	// the variable of interest
+	string scalar cellcmd, stocmd
+
+	// Declare a variable to store the matrix column stripe from the coefficient
+	// vector stored in e(b).
+	string colvector params
+
+	// Declare a variable to use as an iterator
+	real scalar i, borse
+
+	// Get the estimation labels
+	params = st_matrixcolstripe("e(b)")[., 2]
+
+	// Start constructing the storage command
+	stocmd = `"frame post "' + this.frname + `" (\`dc')("\`model'")("\`e(cmdline)'") "'
+
+	// Use fvstubs to check for the presence of the estimate.
+	// Use anyof(params, fvstub[i, 1]) to test for each parameter
+	for(borse = 1; borse <= 2; borse++) {
+
+		// Loop over the factor variable stubs that ID the parameters we want
+		for(i = 1; i <= rows(this.fvstubs); i++) {
+
+			// Test whether to get/test for results for coefficients
+			if(borse == 1) {
+
+				// If the fvstub shows up in the coefficient vector
+				if(anyof(params, this.fvstubs[i, 1])) {
+
+					// Add the syntax used to reference that value from the
+					// estimation results
+					stocmd = stocmd + "(_b[" + this.fvstubs[i, 1] + "])"
+
+				} // End IF Block for estimated parameter
+
+				// Otherwise, store an extended missing value to indicate that
+				// it was ommitted for some reason
+				else stocmd = stocmd + "(.o)"
+
+			} // End of IF Block for coefficients
+
+			// Because of the structure of the storage, we need to test for
+			// standard errors after testing for all of the coefficients
+			else {
+
+				// Check if the fvstub shows up in the coefficient vector label
+				if(anyof(params, this.fvstubs[i, 1])) {
+
+					// If it does add the reference syntax to the standard error
+					stocmd = stocmd + "(_se[" + this.fvstubs[i, 1] + "])"
+
+				} // End IF Block for included standard error
+
+				// Otherwise use an extended missing value to indicate it was
+				// omitted
+				else stocmd = stocmd + "(.o)"
+
+			} // End of ELSE Block for standard errors
+
+		} // End Loop over the parameters of interest
+
+	} // End Loop over coefficients vs standard errors
+
+	// Pre-populate the cellcmd variable
+	cellcmd = "qui: count if e(sample) &  " + this.drbvar + " == "
+
+	// Iterate over the number of levels to get cell sizes
+	for(i = 1; i <= this.levs; i++) {
+
+		// Counts the number of records in the estimation sample for the ith
+		// value in the values member
+		stata(cellcmd + this.values[i, 1])
+
+		// Assigns the number of records in the estimation sample for the ith
+		// value of the values member to the appropriate local macro name for
+		// the command below that will store the results
+		st_local(this.csnames[i, 1], strofreal(st_numscalar("r(N)")))
+
+		// Adds the reference to the storage string
+		// Added to try dealing with missing parameters
+		stocmd = stocmd + "(\`" + this.csnames[i, 1] + "')"
+
+	} // End Loop to get the cell sizes
+
+	// Calls the command we construct in this method
+	stata(stocmd)
+
+} // End of drbstore method
+
+end
+						</script>
+					</code>
+				</pre>
+				<aside class="notes">
+					<ul>
+						<li>We need to store model metadata, an identifier, parameter estimates, standard errors, and cell sizes.</li>
+						<li>Given the nature of the data, the number of parameter estimates can vary between models.</li>
+						<li>So, we need to dynamically generate the code needed to create the storage frame.</li>
+						<li>We also need some checking/coding of results and to generate cell sizes which requires additional dynamic code generation and execution.</li>
+						<li>The result is orders of magnitude fewer I/O operations, which means a ton of time savings on getting output.</li>
+					</ul>
+				</aside>
+			</section>
+			<section>
+				<h2>Static Code Generation</h2>
+				<pre data-id="static-animation" style="width: 65vw; height: 125%; margin-left: -5%;">
+					<code class="hljs" data-trim data-line-numbers="1-11|62-75|101-120|123-148">
+						<script type="text/template">
+// Start Python interpreter
+python
+
+# Imports the document class object from the python-docx module from pip
+from docx.api import Document
+
+# Imports the pandas library with the alias pd
+import pandas as pd
+
+# Imports the regular expression module
+import re
+
+# Location where the file is stored
+filepath = '/Users/billy/Desktop/Programs/JavaScript/stataConference2023/fs002-19-1.docx'
+
+# Loads the MS Word document into a Document class object
+doc = Document(filepath)
+
+# Creates an empty dict to store any of the tables in the document
+tables = dict()
+
+# Approach based on function illustrated at:
+# https://medium.com/@karthikeyan.eaganathan/read-tables-from-docx-file-to-pandas-dataframes-f7e409401370
+for i in range(len(doc.tables)):
+
+    # Gets an individual instance of a table in the MS Word Document
+    table = doc.tables[i]
+
+    # Parses the table contents into a list of lists
+    data = [[cell.text for cell in row.cells] for row in table.rows]
+
+    # Converts to a Pandas DataFrame object
+    df = pd.DataFrame(data)
+
+    # Assigns the first record as column names and drops the first record
+    df = df.rename(columns = df.iloc[0]).drop(df.index[0]).reset_index(drop = True)
+
+    # Adds the table to the dict of tables
+    tables['table' + str(i)] = df
+
+
+# Gets the table with the file specification of interest
+filespec = tables['table16']
+
+# Recasts the start position to a numeric value
+filespec['Start Position'] = filespec['Start Position'].astype('int', copy = False)
+
+# Strips new line characters from data element name and the permitted values columns
+filespec['Data Element Name'] = filespec['Data Element Name'].apply(lambda x: re.sub('\n', ' ', x))
+filespec['Permitted Values\nAbbreviations'] = filespec['Permitted Values\nAbbreviations'].apply(lambda x: re.sub('\n', '; ', x))
+filespec['Definition / Comments'] = filespec['Definition / Comments'].apply(lambda x: re.sub('\n', ' ', x))
+
+# Strips unnecessary info from the type column
+filespec['Type'] = filespec['Type'].apply(lambda x: re.sub('\nRevised!', '', x).lower()[:3])
+
+# Renames the columns to Stata friendly names
+filespec.columns = ['name', 'start', 'length', 'type', 'pop', 'comments', 'vallab' ]
+
+# Get the column names and types to create Stata variables
+varntypes = dict([(i, filespec[i].dtype.name) for i in filespec.columns ])
+
+# Load module for Stata API
+from sfi import Data
+
+# Create variables in Stata
+{ Data.addVarStrL(k) if v == 'object' else Data.addVarLong(k) for k, v in varntypes.items() }
+
+# Allocate the number of observations
+Data.addObs(filespec.shape[0], nofill = True)
+
+# Load the file spec into Stata for further processing
+Data.store(None, None, val = filespec.values.tolist())
+
+# Ends the Python interpreter and goes back to Stata
+end
+
+// Compress the data
+compress
+
+// Creates generic variable names
+g str5 varn = "var" + strofreal(_n)
+
+// Creates the end column value
+g int end = start[_n + 1] - 1
+
+// Create stata types based on the type and length values
+g str4 statatype = 	cond(type == "int" & real(length) > 5, "long", type)
+
+// Clean up the variables
+replace vallab = itrim(trim(vallab))
+replace name = itrim(trim(name))
+replace comments = itrim(trim(comments))
+
+// Cast the start and end values as strings
+tostring start end, replace
+
+// Remove carriage return character entry if it just represents the end of the
+// line of data
+drop if ustrregexm(name, "(Carriage Return)|(Line Feed)|(CR)|(LF)", 1) & _n == `c(N)'
+
+// Create a file connection for the dictionary file
+file open fh using filespec.dct, w t replace
+
+// Create first line
+file write fh "infix dictionary using sampleFile.txt {" _n
+
+// Loop over the records in the file specification
+forv i = 1/`c(N)' {
+
+	// Writes the parsing specification to the file for the variable
+	file write fh _tab (statatype[`i']) + " " + (varn[`i']) + " " +			 ///
+	(start[`i']) + "-" + (end[`i']) _n
+
+} // End of Loop over specification
+
+// Closes the curly brace
+file write fh "}" _n(2)
+
+// Closes the file connection
+file close fh
+
+// Create a second file connection
+file open fh using filespec.do, w t replace
+
+// Write the line to parse the file and load into Stata
+file write fh "infix using filespec.dct" _n
+
+// Start loop over the file specification to add metadata to the data set
+forv i = 1/`c(N)' {
+
+	// Adds variable labels
+	file write fh ("la var " + "`: di varn[`i']'" + " " +  `""`: di name[`i']'""') _n
+
+	// Adds comments as characteristics
+	file write fh ("char " + varn[`i'] + "[comments] " + comments[`i']) _n
+
+	// Test for value labels being present for the variable
+	if ustrregexm(vallab[`i'], "\w\d", 1) {
+
+		// If there is something, add it as a characteristic as well
+		file write fh ("char " + varn[`i'] + "[decodes] " + vallab[`i']) _n
+
+	} // End IF Block testing for decode values
+
+} // End Loop over file specification
+
+// Closes the do file
+file close fh
+						</script>
+					</code>
+				</pre>
+				<aside class="notes">
+					<ul>
+						<li>We can't read MS Word files directly into Stata, so this example uses the Python API in conjunction with Stata.</li>
+						<li>After reading the MS Word file, finding the table with the file specification, doing a bit of cleaning, the data set gets loaded into Stata.</li>
+						<li>I did a bit of cleaning and creating a few additional variables in Stata and then start writing the dictionary file, by looping over the data set and substituting the info from the data set into the output code.</li>
+						<li>But that wasn't enough, so I then created the .do file that would load the data, add variable labels, and add characteristics to the file automatically.</li>
+					</ul>
+				</aside>
+			</section>
+			<section>
+				<h2>Transformation</h2>
+				<pre data-id="transformation-animation" style="width: 65vw; height: 125%; margin-left: -5%;">
+					<code class="hljs" data-trim data-line-numbers="1-16|19-49">
+						<script type="text/template">
+			// Load example data
+			webuse cattaneo2.dta, clear
+
+			// Classify variables into categorical, continuous, and binary
+			vl set, dummy cat(7) clear
+
+			// Maps vl lists to locals
+			loc vlbin $vldummy
+			loc vlcont $vlcontinuous $vluncertain
+			loc vlcat $vlcategorical
+
+			// Get all variable names
+			qui: ds
+
+			// Use tuples to create variable lists of different variables
+			tuples `r(varlist)', max(5) min(2) di
+
+			// Loop over output from tuples
+			forv i = 1/`ntuples' {
+
+				// Get DV token and covariates
+				gettokens dv cvs : `tuple`i''
+
+				// Gets mappings between covariates and types
+				loc catvars : list cvs & vlcat
+				loc binvars : list cvs & vlbin
+				loc contvars : list cvs & vlcont
+
+				// Create updated covariate list
+				loc covariates `contvars'
+
+				// Loop over types of covariates that need fv notation
+				foreach v in catvars binvars {
+
+					// Only if there are variables in the list
+					if !mi(`"``v''"') loc covariates `covariates' `"i.`: di ustrregexra("``v''", " ", " i.")'"'
+
+				} // End loop over variables needing factor variable notation
+
+				// If the DV is continuous fit a linear regression
+				if `: list dv in vlcont' reg `dv' `covariates'
+
+				// If it is multivalued and categorical fit an mlogit model
+				else if `: list dv in vlcat' mlogit `dv' `covariates'
+
+				// If it is binary fit a logit
+				else if `: list dv in vlbin' logit `dv' `covariates'
+
+			} // End loop over variable combinations
+						</script>
+					</code>
+				</pre>
+				<aside class="notes">
+					<p>Remember that this is a type of Behavior Modification</p>
+					<ul>
+						<li>In this example, I'll modify the modeling behavior based on properties of the data that aren't known ahead of time.</li>
+						<li>Using the variable list command, the variables are classified into types, and then build arbitrary combinations of the variables</li>
+						<li>Next, determine what types of covariates exist in the model and the type of dependent variable.  For categorical covariates, add factor variable notation.</li>
+						<li>Lastly, fit a statistical model based on the type of DV.</li>
+					</ul>
+				</aside>
+			</section>
+			<!-- brewscheme Templates
+			<section style="">
+				<h2>Code Templates</h2>
+				<pre data-id="template-animation" style="width: 65vw; height: 125%; margin-left: -5%;">
+					<code class="hljs" data-trim data-line-numbers="220-244|800-825|887-914">
+						<script type="text/template">
+			// Use a tempname for the scheme file filehandle
+			tempname scheme1 scheme2 scheme3 scheme4 scheme5
+
+			// Root file path to theme files
+			loc themeroot `"`c(sysdir_personal)'b/theme/theme"'
+
+			// Root file path for brewscheme created scheme files
+			loc schemeroot `"`c(sysdir_plus)'/s/scheme"'
+
+			// Write the scheme file to a location on the path
+			qui: file open `scheme1' using `"`schemeroot'-`schemename'.scheme"', w replace
+			qui: file open `scheme2' using `"`schemeroot'-`schemename'_achromatopsia.scheme"', w replace
+			qui: file open `scheme3' using `"`schemeroot'-`schemename'_protanopia.scheme"', w replace
+			qui: file open `scheme4' using `"`schemeroot'-`schemename'_deuteranopia.scheme"', w replace
+			qui: file open `scheme5' using `"`schemeroot'-`schemename'_tritanopia.scheme"', w replace
+
+			// Find maximum number of colors to set the recycle parameter
+			loc pcycles = max(	`barcolors', `scatcolors', `areacolors',	 ///
+			`linecolors', `boxcolors', `dotcolors', 	 ///
+			`piecolors', `suncolors', `histcolors', 	 ///
+			`cicolors', `matcolors', `reflcolors', 		 ///
+			`refmcolors')
+
+			// Recycle the number of symbols
+			qui: mata: recycle(`numsymbols', `pcycles')
+
+			// Loop over the sequence of symbols
+			foreach symb in `sequence' {
+
+			// Build a string with each of the symbols corresponding to the
+			// appropriate cycle number
+			loc symbolseq `"`symbolseq' "`: word `symb' of `symbols''""'
+
+			} // End Loop over symbol sequence
+
+			// Check to see if start and end contour color palettes are the same
+			if `"`constart'"' == `"`conend'"' {
+
+			// Get version of palette w/minimum number of colors
+			qui: su pcolor if palette == `"`constart'"'
+
+			// Get the RGB values for the given palette and number of colors
+			mata: brewc.getPalette(`"`constart'"', `r(min)')
+
+			// Overwrite the local macro with the RGB value
+			loc constart `: word 1 of `rgbs''
+
+			// Overwrite the local macro with the RGB value
+			loc conend `: word 2 of `rgbs''
+
+			} // End IF Block for case where contour start/end use same palette
+
+			// If they use different palettes
+			else {
+
+			// Get version of palette with minimum number of colors for start
+			qui: su pcolor if palette == `"`constart'"'
+
+			// Get the RGB values for the given palette and number of colors
+			mata: brewc.getPalette(`"`constart'"', `r(min)')
+
+			// Overwrite the local macro with the RGB value
+			loc constart `: word 1 of `rgbs''
+
+			// Get version of palette with minimum number of colors for start
+			qui: su pcolor if palette == `"`conend'"'
+
+			// Get the RGB values for the ending color for contour plots for
+			// the given color palette
+			mata: brewc.getPalette(`"`conend'"', `r(min)')
+
+			// Overwrite the local macro with the RGB value second word used here
+			// to prevent same color issue if the allstyle option is used.
+			loc conend `: word 2 of `rgbs''
+
+			} // End ELSE Block for separate start/end contour palettes
+
+			// Loop over color macros
+			foreach color in bar scat area line box dot pie hist ci mat		 ///
+			refl refm sun {
+
+			/* Create the sequence of color ids for each graph type based on
+			the maximum number of colors in any listed color argument. */
+			qui: mata: recycle(``color'colors', `pcycles')
+
+			// Assign the id sequence to a local with seq as suffix
+			loc `color'seq = `"`sequence'"'
+
+			// Get the colors for the specified palette and number of colors
+			mata: brewc.getPalette("``color'style'", ``color'colors')
+
+			// Loop over the rgb values to construct the graph specific
+			// rgb values
+			foreach c of loc `color'seq {
+
+			// Construct macro with RGB values for lookup
+			loc `color'rgb `"``color'rgb' "`: word `c' of `rgbs''" "'
+
+			} // End Loop
+
+			// Create marker for graph type with maximum number of colors
+			if ``color'colors' == `pcycles' {
+
+			// Set the generic color macro to reference macro w/max colors
+			loc gencolor `"``color'rgb'"'
+
+			} // End of IF Block to define generic color macro
+
+			} // End Loop over number of colors for graph types
+
+			// Stubs to use for line references to theme files
+			loc linerefs theme1 theme2 theme3 theme4 theme5
+
+			// Tempnames
+			tempname theme1 theme2 theme3 theme4 theme5
+
+			// Check for theme file
+			if `"`themefile'"' != "" {
+
+			// Themefile names
+			loc themerefs `"`themeroot'-`themefile'.theme"'				 ///
+			`"`themeroot'-`themefile'_achromatopsia.theme"'				 ///
+			`"`themeroot'-`themefile'_protanopia.theme"'				 ///
+			`"`themeroot'-`themefile'_deuteranopia.theme"'				 ///
+			`"`themeroot'-`themefile'_tritanopia.theme"'
+
+			// Loop over theme files
+			forv thf = 1/5 {
+
+			// Open the first file
+			file open `theme`thf'' using `"`: word `thf' of `"`themerefs'"''"', r
+
+			// zero value local macro
+			loc x = 1
+
+			// Read the first line of the file
+			file read `theme`thf'' theme`thf'_`x'
+
+			// Loop until end of file
+			while r(eof) == 0 {
+
+			// Increment line counter
+			loc x = `x' + 1
+
+			// Read line into local macro
+			file read `theme`thf'' theme`thf'_`x'
+
+			} // End Loop over theme file
+
+			// Close the file connection
+			file close `theme`thf''
+
+			} // End Loop over themefiles
+
+			} // End IF Block for user specified theme file
+
+			// If user does not specify a file
+			else {
+
+			// Check for default file
+			cap confirm file `"`themeroot'-default.theme"'
+
+			// If the default file exists
+			if _rc != 0 {
+
+			// Create the default brewtheme files
+			qui: brewtheme
+
+			} // End IF Block to open a connection to the default theme
+
+			// Themefile names
+			loc themerefs `"`themeroot'-default.theme"'					 ///
+			`"`themeroot'-default_achromatopsia.theme"'					 ///
+			`"`themeroot'-default_protanopia.theme"'					 ///
+			`"`themeroot'-default_deuteranopia.theme"'					 ///
+			`"`themeroot'-default_tritanopia.theme"'
+
+			// Loop over theme files
+			forv thf = 1/5 {
+
+			// Open the first file
+			file open `theme`thf'' using `"`: word `thf' of `"`themerefs'"''"', r
+
+			// zero value local macro
+			loc x = 1
+
+			// Read the first line of the file
+			file read `theme`thf'' theme`thf'_`x'
+
+			// Loop until end of file
+			while r(eof) == 0 {
+
+			// Increment line counter
+			loc x = `x' + 1
+
+			// Read line into local macro
+			file read `theme`thf'' theme`thf'_`x'
+
+			} // End Loop over theme file
+
+			// Close the file connection
+			file close `theme`thf''
+
+			} // End Loop over themefiles
+
+			} // End ELSE Block for null theme file
+
+			// Name extension macros
+			loc nameext "" "_achromatopsia" "_protanopia" "_deuteranopia" "_tritanopia"
+
+			// Loop over the theme/scheme file pairs
+			forv j = 1/5 {
+
+			// Correction for schemenames
+			if `j' == 1  loc schemelabel `"label "`schemename'""'
+
+			// For all other cases
+			else loc schemelabel `"label "`schemename'`: word `j' of `nameext''""'
+
+			file write `scheme`j'' `"*                                    s2color.scheme"' _n
+			file write `scheme`j'' `""' _n
+			file write `scheme`j'' `"* s2 scheme family with a naturally white background (white plotregions and"' _n
+			file write `scheme`j'' `"* lightly colored background) and color foreground (lines, symbols, text, etc)."' _n
+			file write `scheme`j'' `""' _n
+			file write `scheme`j'' `"*  For p[#][stub] scheme references the corresponding style is resolved by"' _n
+			file write `scheme`j'' `"*  searching the scheme ids with the following preference ordering:"' _n
+			file write `scheme`j'' `"*"' _n
+			file write `scheme`j'' `"*                p#stub"' _n
+			file write `scheme`j'' `"*                pstub"' _n
+			file write `scheme`j'' `"*                p#"' _n
+			file write `scheme`j'' `"*                p"' _n
+			file write `scheme`j'' `"*"' _n
+			file write `scheme`j'' `"*  Thus it is possible to control the selected style to great detail, or let it"' _n
+			file write `scheme`j'' `"*  default to common defaults.  In particular -p- or -pstub- without"' _n
+			file write `scheme`j'' `"*  # can be used to designate a common plotting symbol, or back plotting"' _n
+			file write `scheme`j'' `"*  symbol, or for that matter common color or sizes."' _n
+			file write `scheme`j'' `"*"' _n
+			file write `scheme`j'' `"*  "style"s designated "special" are not styles at all, but direct signals to"' _n
+			file write `scheme`j'' `"*  graphs, plots, or other classes and their parsers.  Their contents are"' _n
+			file write `scheme`j'' `"*  specific to the use and may only be understood by the caller."' _n
+			file write `scheme`j'' `""' _n
+			file write `scheme`j'' `"*!  version 1.2.5   16jun2011"' _n(2)
+			file write `scheme`j'' `"sequence 1299"' _n
+			file write `scheme`j'' `"`schemelabel'"' _n(2)
+			file write `scheme`j'' `"system   naturally_white  1"' _n(3)
+
+			// Loop over first 10 lines of theme file
+			forv i = 1/10 {
+
+			// Write each line to the scheme file
+			file write `scheme`j'' `theme`j'_`i''
+
+			} // End Loop over lines 1-10 of theme file
+
+			file write `scheme`j'' `"numstyle pcycle           `pcycles'"' _n(2)
+
+			// Loop over lines 11-16 of the theme file
+			forv i = 11/16 {
+
+			// Write each line to the scheme file
+			file write `scheme`j'' `theme`j'_`i''
+
+			} // End loop over lines 11-16 of the theme file
+
+			file write `scheme`j'' `"numstyle contours         `pcycles'"' _n(2)
+
+			// Loop over lines 17-179 of the theme file
+			forv i = 17/179 {
+
+			// Write each line to the scheme file
+			file write `scheme`j'' `theme`j'_`i''
+
+			} // End loop over lines 17-179 of the theme file
+
+			} // End Loop over scheme/theme file pairs
+
+			// Local with color type refs
+			loc ctyperefs rgb achromatopsia protanopia deuteranopia tritanopia
+
+			// Get the area1 rgb values
+			mata: brewc.brewColorSearch("`: word 1 of `areargb''")
+
+			// Loop over macros
+			forv rfs = 1/5 {
+
+			// Store all the translated RGB values
+			loc ci_area`rfs' ``: word `rfs' of `ctyperefs'''
+
+			} // End Loop over macro reassignments
+
+			// Get the cysymbol rgb values
+			mata: brewc.brewColorSearch("`: word 1 of `cirgb''")
+
+			// Loop over macros
+			forv rfs = 1/5 {
+
+			// Store all the translated RGB values
+			loc ci_symbol`rfs' ``: word `rfs' of `ctyperefs'''
+
+			} // End Loop over macro reassignments
+
+			// Get the area1 rgb values
+			mata: brewc.brewColorSearch("`: word 2 of `areargb''")
+
+			// Loop over macros
+			forv rfs = 1/5 {
+
+			// Store all the translated RGB values
+			loc ci2_area`rfs' ``: word `rfs' of `ctyperefs'''
+
+			} // End Loop over macro reassignments
+
+			// Get the cysymbol rgb values
+			mata: brewc.brewColorSearch("`: word 2 of `cirgb''")
+
+			// Loop over macros
+			forv rfs = 1/5 {
+
+			// Store all the translated RGB values
+			loc ci2_symbol`rfs' ``: word `rfs' of `ctyperefs'''
+
+			} // End Loop over macro reassignments
+
+			// Search for histogram color
+			mata: brewc.brewColorSearch("`: word 1 of `histrgb''")
+
+			// Loop over macros
+			forv rfs = 1/5 {
+
+			// Store all the translated RGB values
+			loc histogram`rfs' ``: word `rfs' of `ctyperefs'''
+
+			} // End Loop over macro reassignments
+
+			// Search for generic sunflower plot color
+			mata: brewc.brewColorSearch("`: word 1 of `sunrgb''")
+
+			// Loop over macros
+			forv rfs = 1/5 {
+
+			// Store all the translated RGB values
+			loc sunflower`rfs' ``: word `rfs' of `ctyperefs'''
+
+			} // End Loop over macro reassignments
+
+			// Search for generic light flower
+			mata: brewc.brewColorSearch("`: word 2 of `sunrgb''")
+
+			// Loop over macros
+			forv rfs = 1/5 {
+
+			// Store all the translated RGB values
+			loc sunflowerlf`rfs' ``: word `rfs' of `ctyperefs'''
+
+			} // End Loop over macro reassignments
+
+			// Search for generic dark flower
+			mata: brewc.brewColorSearch("`: word 3 of `sunrgb''")
+
+			// Loop over macros
+			forv rfs = 1/5 {
+
+			// Store all the translated RGB values
+			loc sunflowerdf`rfs' ``: word `rfs' of `ctyperefs'''
+
+			} // End Loop over macro reassignments
+
+			// Search for contour start values
+			mata: brewc.brewColorSearch("`constart'")
+
+			// Store the contour start values
+			forv rfs = 1/5 {
+
+			// Index values like other graph types
+			loc constart`rfs' ``: word `rfs' of `ctyperefs'''
+
+			} // End Loop over contour plot starting values
+
+			// Search for contour end values
+			mata: brewc.brewColorSearch("`conend'")
+
+			// Store the contour end values
+			forv rfs = 1/5 {
+
+			// Index values like other graph types
+			loc conend`rfs' ``: word `rfs' of `ctyperefs'''
+
+			} // End Loop over contour plot ending values
+
+			// Loop over scheme/theme file pairs
+			forv j = 1/5 {
+
+			file write `scheme`j'' `"color ci_line        "0 0 0""' _n
+			file write `scheme`j'' `"color ci_arealine    "0 0 0""' _n
+			file write `scheme`j'' `"color ci_area        "`ci_area`j''" "' _n
+			file write `scheme`j'' `"color ci_symbol      "`ci_symbol`j''" "' _n
+			file write `scheme`j'' `"color ci2_line       "0 0 0""' _n
+			file write `scheme`j'' `"color ci2_arealine   "0 0 0""' _n
+			file write `scheme`j'' `"color ci2_area       "`ci2_area`j''" "' _n
+			file write `scheme`j'' `"color ci2_symbol     "`ci2_symbol`j''" "' _n(2)
+
+			file write `scheme`j'' `"color pieline        "0 0 0""' _n(2)
+
+			// Writes line 180 from the theme file
+			file write `scheme`j'' `theme`j'_180'
+
+			// Writes line 181 from the theme file
+			file write `scheme`j'' `theme`j'_181'
+
+			file write `scheme`j'' `"color refmarker      "0 0 0""' _n
+			file write `scheme`j'' `"color refmarkline    "0 0 0""' _n
+			file write `scheme`j'' `"color histogram      "`histogram`j''" "' _n
+
+			// Writes line 182 from the theme file
+			file write `scheme`j'' `theme`j'_182'
+
+			file write `scheme`j'' `"color histogram_line "0 0 0""' _n
+			file write `scheme`j'' `"color dot_line       "0 0 0""' _n
+			file write `scheme`j'' `"color dot_arealine   "0 0 0""' _n
+			file write `scheme`j'' `"color dot_area       "`ci_area`j''" "' _n
+			file write `scheme`j'' `"color dotmarkline    "0 0 0""' _n(2)
+
+			file write `scheme`j'' `"color xyline         "0 0 0""' _n
+			file write `scheme`j'' `"color refline        "0 0 0""' _n
+			file write `scheme`j'' `"color dots           "0 0 0""' _n(2)
+
+			// Loop over lines 183-192 of the theme file
+			forv i = 183/192 {
+
+			// Write each line to the scheme file
+			file write `scheme`j'' `theme`j'_`i''
+
+			} // End loop over lines 183-192 of the theme file
+
+			// Check for values for starting/ending contour plots
+			if "`constart`j''" == "" loc constart purple
+			if "`conend`j''" == "" loc conend orange
+
+			file write `scheme`j'' `"color contour_begin "`constart`j''""' _n
+			file write `scheme`j'' `"color contour_end "`conend`j''""' _n
+			file write `scheme`j'' `"color zyx2 "0 0 0""' _n(2)
+
+			file write `scheme`j'' `"color sunflower "`sunflower`j''""' _n
+			file write `scheme`j'' `"color sunflowerlb "0 0 0""' _n
+			file write `scheme`j'' `"color sunflowerlf "`sunflowerlf`j''""' _n
+			file write `scheme`j'' `"color sunflowerdb "0 0 0""' _n
+			file write `scheme`j'' `"color sunflowerdf "`sunflowerdf`j''""' _n(2)
+			file write `scheme`j'' `"color p       gs6"' _n
+
+			} // End Loop over theme/scheme pairs
+
+			/* Add generic color loop here */
+			forv i = 1/`: word count `gencolor'' {
+
+			// Look up color value
+			mata: brewc.brewColorSearch("`: word `i' of `gencolor''")
+
+			// Loop over macros / theme/scheme file pairs
+			forv rfs = 1/5 {
+
+			// Add entry to scheme files
+			file write `scheme`rfs'' `"color p`i' "``: word `rfs' of `ctyperefs'''""' _n
+
+			} // End Loop over theme/scheme file pairs
+
+			} // End Loop for generic colors
+
+			// Loop over theme/scheme file pairs
+			forv j = 1/5 {
+
+			// Write blank line to scheme file
+			file write `scheme`j'' `""' _n
+
+			// Loop over lines 193-331 of the theme file
+			forv i = 193/331 {
+
+			// Write each line to the scheme file
+			file write `scheme`j'' `theme`j'_`i''
+
+			} // End loop over lines 193-331 of the theme file
+
+			file write `scheme`j'' `"markerstyle p1"' _n
+			file write `scheme`j'' `"markerstyle dots dots"' _n
+			file write `scheme`j'' `"markerstyle star star"' _n
+			file write `scheme`j'' `"markerstyle histogram histogram"' _n
+			file write `scheme`j'' `"markerstyle ci ci"' _n
+			file write `scheme`j'' `"markerstyle ci2 ci2"' _n
+			file write `scheme`j'' `"markerstyle ilabel ilabel"' _n
+			file write `scheme`j'' `"markerstyle matrix matrix"' _n
+			file write `scheme`j'' `"markerstyle box_marker refmarker"' _n
+			file write `scheme`j'' `"markerstyle editor editor"' _n
+			file write `scheme`j'' `"markerstyle editor_arrow ed_arrow"' _n
+			file write `scheme`j'' `"markerstyle sunflower sunflower"' _n(2)
+
+			// Write generic marker styles
+			foreach i in "" "box" "dot" "arrow" {
+
+			// Loop over cycle numbers
+			forv v = 1/`pcycles' {
+
+			// Add entry to scheme file
+			file write `scheme`j'' `"markerstyle p`v'`i'  p`v'`i'"' _n
+
+			} // End Loop over cycle number
+
+			// Write blank line between each of the types
+			file write `scheme`j'' `""' _n
+
+			} // End Loop over marker style generic types
+
+			// Add extra space after p#arrow
+			file write `scheme`j'' `""' _n
+
+			// Loop over lines 332-382 of the theme file
+			forv i = 332/382 {
+
+			// Write each line to the scheme file
+			file write `scheme`j'' `theme`j'_`i''
+
+			} // End loop over lines 332-382 of the theme file
+
+			// Shade/fill settings
+			file write `scheme`j'' `"shadestyle foreground"' _n
+			file write `scheme`j'' `"shadestyle background background"' _n
+			file write `scheme`j'' `"shadestyle foreground foreground"' _n(2)
+			file write `scheme`j'' `"shadestyle ci ci"' _n
+			file write `scheme`j'' `"shadestyle ci2 ci2"' _n
+			file write `scheme`j'' `"shadestyle histogram histogram"' _n
+			file write `scheme`j'' `"shadestyle dendrogram dendrogram"' _n
+			file write `scheme`j'' `"shadestyle dotchart dotchart"' _n
+			file write `scheme`j'' `"shadestyle legend legend"' _n
+			file write `scheme`j'' `"shadestyle clegend_outer clegend_outer"' _n
+			file write `scheme`j'' `"shadestyle clegend_inner clegend_inner"' _n
+			file write `scheme`j'' `"shadestyle clegend_preg none"' _n
+			file write `scheme`j'' `"shadestyle plotregion plotregion"' _n
+			file write `scheme`j'' `"shadestyle matrix_plotregion matrix_plotregion"' _n
+			file write `scheme`j'' `"shadestyle sunflower sunflower"' _n
+			file write `scheme`j'' `"shadestyle sunflowerlb sunflowerlb"' _n
+			file write `scheme`j'' `"shadestyle sunflowerdb sunflowerdb"' _n
+			file write `scheme`j'' `"shadestyle contour_begin contour_begin"' _n
+			file write `scheme`j'' `"shadestyle contour_end contour_end"' _n(2)
+			file write `scheme`j'' `"shadestyle p foreground"' _n(2)
+
+			// Write generic marker styles
+			foreach i in "" "bar" "box" "pie" "area" {
+
+			// Loop over cycle numbers
+			forv v = 1/`pcycles' {
+
+			// Add entry to scheme file
+			file write `scheme`j'' `"shadestyle p`v'`i'  p`v'`i'"' _n
+
+			} // End Loop over cycle number
+
+			// Spaces between graph types
+			if "`i'" != "area" {
+
+			// Write blank line between each of the types
+			file write `scheme`j'' `""' _n
+
+			} // End IF Block for other graphtypes
+
+			// For area shade styles
+			else {
+
+			// This line files final area entry
+			file write `scheme`j'' `"* shadestyle p#other  p1"' _n(3)
+
+			} // End Else Block for area shade styles
+
+			} // End Loop over marker style generic types
+
+			// Loop over lines 383-434 of the theme file
+			forv i = 383/434 {
+
+			// Write each line to the scheme file
+			file write `scheme`j'' `theme`j'_`i''
+
+			} // End loop over lines 383-434 of the theme file
+
+			// Write generic marker styles
+			foreach i in "" "bar" "box" "area" "line" "other" "mark" 		 ///
+			"boxmark" "dotmark" "arrow" "arrowline" "sunflowerlight" 		 ///
+			"sunflowerdark" {
+
+			// Loop over cycle numbers
+			forv v = 1/`pcycles' {
+
+			// Check for sunflower cases
+			if !inlist(`"`i'"', "sunflowerlight", "sunflowerdark") {
+
+			// Add entry to scheme file
+			file write `scheme`j'' `"linestyle p`v'`i'  p`v'`i'"' _n
+
+			} // End If Block for non sunflower plots
+
+			// For the sunflower caes
+			else {
+
+			// Use the generic line style for the sunflower plots
+			file write `scheme`j'' `"linestyle p`v'`i' p`v'"' _n
+
+			} // End ELSE Block for sunflower plots
+
+			} // End Loop over cycle number
+
+			// Write blank line between each of the types
+			file write `scheme`j'' `""' _n
+
+			} // End Loop over marker style generic types
+
+			// Loop over lines 435-494 of the theme file
+			forv i = 435/494 {
+
+			// Write each line to the scheme file
+			file write `scheme`j'' `theme`j'_`i''
+
+			} // End loop over lines 435-494 of the theme file
+
+			// Settings for color saturation
+			file write `scheme`j'' `"intensity            full"' _n
+			file write `scheme`j'' `"intensity foreground inten100"' _n
+			file write `scheme`j'' `"intensity background inten100"' _n(2)
+			file write `scheme`j'' `"intensity symbol     inten`scatsaturation'"' _n
+			file write `scheme`j'' `"intensity ci_area    inten`cisaturation'"' _n
+			file write `scheme`j'' `"intensity histogram  inten`histsaturation'"' _n
+			file write `scheme`j'' `"intensity dendrogram inten`linesaturation'"' _n
+			file write `scheme`j'' `"intensity dot_area   inten`dotsaturation'"' _n
+			file write `scheme`j'' `"intensity sunflower  inten`sunsaturation'"' _n(2)
+			file write `scheme`j'' `"intensity bar        inten`barsaturation'"' _n
+			file write `scheme`j'' `"intensity bar_line   inten`linesaturation'"' _n
+			file write `scheme`j'' `"intensity box        inten`boxsaturation'"' _n
+			file write `scheme`j'' `"intensity box_line   inten`linesaturation'"' _n
+			file write `scheme`j'' `"intensity pie        inten`piesaturation'"' _n(2)
+			file write `scheme`j'' `"intensity legend     inten100"' _n
+			file write `scheme`j'' `"intensity plotregion inten100"' _n
+			file write `scheme`j'' `"intensity matrix_plotregion inten`matsaturation'"' _n(2)
+			file write `scheme`j'' `"intensity clegend       inten100"' _n
+			file write `scheme`j'' `"intensity clegend_outer inten100"' _n
+			file write `scheme`j'' `"intensity clegend_inner inten100"' _n(3)
+			file write `scheme`j'' `"intensity p          inten`scatsaturation'"' _n
+
+			file write `scheme`j'' `"* intensity p#        inten80"' _n
+			file write `scheme`j'' `"* intensity p#shade   inten80"' _n
+			file write `scheme`j'' `"* intensity p#bar     inten80	   // twoway bar only, graph bar overall"' _n
+			file write `scheme`j'' `"* intensity p#box     inten80	   // unused, overall only, control w/ color"' _n
+			file write `scheme`j'' `"* intensity p#pie     inten80	   // unused, overall only, control w/ color"' _n
+			file write `scheme`j'' `"* intensity p#area    inten80"' _n(3)
+
+			file write `scheme`j'' `"fillpattern pattern10"' _n
+			file write `scheme`j'' `"fillpattern foreground pattern10"' _n
+			file write `scheme`j'' `"fillpattern background pattern10"' _n(3)
+
+			// Loop over lines 495-536 of the theme file
+			forv i = 495/536 {
+
+			// Write each line to the scheme file
+			file write `scheme`j'' `theme`j'_`i''
+
+			} // End loop over lines 495-536 of the theme file
+
+			// Write generic marker styles
+			foreach i in "" "boxlabel" {
+
+			// Loop over cycle numbers
+			forv v = 1/`pcycles' {
+
+			// Add entry to scheme file
+			file write `scheme`j'' `"textboxstyle p`v'`i'  p`v'`i'"' _n
+
+			} // End Loop over cycle number
+
+			// Write blank line between each of the types
+			file write `scheme`j'' `""' _n
+
+			} // End Loop over marker style generic types
+
+			file write `scheme`j'' `"* textboxstyle p15label     xyz"' _n(3)
+
+			// Loop over lines 537-590 of the theme file
+			forv i = 537/590 {
+
+			// Write each line to the scheme file
+			file write `scheme`j'' `theme`j'_`i''
+
+			} // End loop over lines 537-590 of the theme file
+
+			// Write generic marker styles
+			foreach i in "" "bar" "box" "pie" "area" "sunflowerlight" 		 ///
+			"sunflowerdark" {
+
+			// Loop over cycle numbers
+			forv v = 1/`pcycles' {
+
+			// Check for sunflower cases
+			if !inlist(`"`i'"', "sunflowerlight", "sunflowerdark") {
+
+			// Add entry to scheme file
+			file write `scheme`j'' `"areastyle p`v'`i'  p`v'`i'"' _n
+
+			} // End If Block for non sunflower plots
+
+			// For the sunflower caes
+			else {
+
+			// Use the generic line style for the sunflower plots
+			file write `scheme`j'' `"areastyle p`v'`i' p`v'"' _n
+
+			} // End ELSE Block for sunflower plots
+
+			} // End Loop over cycle number
+
+			// Write blank line between each of the types
+			file write `scheme`j'' `""' _n
+
+			} // End Loop over marker style generic types
+
+			// Loop over lines 591-770 of the theme file
+			forv i = 591/770 {
+
+			// Write each line to the scheme file
+			file write `scheme`j'' `theme`j'_`i''
+
+			} // End loop over lines 591-770 of the theme file
+
+			// Write generic marker styles
+			foreach i in "" "box" {
+
+			// Loop over cycle numbers
+			forv v = 1/`pcycles' {
+
+			// Add entry to scheme file
+			file write `scheme`j'' `"labelstyle p`v'`i'  p`v'`i'"' _n
+
+			} // End Loop over cycle number
+
+			// Write blank line between each of the types
+			file write `scheme`j'' `""' _n
+
+			} // End Loop over marker style generic types
+
+			file write `scheme`j'' `""' _n
+
+			// Loop over lines 771-911 of the theme file
+			forv i = 771/911 {
+
+			// Write each line to the scheme file
+			file write `scheme`j'' `theme`j'_`i''
+
+			} // End loop over lines 771-911 of the theme file
+
+			// Loop over color cycles
+			forv i = 1/`pcycles' {
+
+			// Add default entry for each color cycle
+			file write `scheme`j'' `"zyx2style p`i' default"' _n
+
+			} // End Loop over number of color cycles
+
+			file write `scheme`j'' `"seriesstyle p1"' _n(2)
+			file write `scheme`j'' `"seriesstyle dendrogram dendrogram"' _n(2)
+			file write `scheme`j'' `"seriesstyle ilabel ilabel"' _n
+			file write `scheme`j'' `"seriesstyle matrix matrix"' _n(2)
+
+			// Write generic marker styles
+			foreach i in "" "bar" "box" "pie" "area" "line" "dot" "arrow" {
+
+			// Loop over cycle numbers
+			forv v = 1/`pcycles' {
+
+			// Add entry to scheme file
+			file write `scheme`j'' `"seriesstyle p`v'`i'  p`v'`i'"' _n
+
+			} // End Loop over cycle number
+
+			// Write blank line between each of the types
+			file write `scheme`j'' `""' _n
+
+			} // End Loop over marker style generic types
+
+			// Loop over lines 912-976 of the theme file
+			forv i = 912/976 {
+
+			// Write each line from the theme file to the scheme file
+			file write `scheme`j'' `theme`j'_`i''
+
+			} // End Loop over lines 912-976 of the theme file
+
+			// Set generic parameters
+			forv i = 1/`pcycles' {
+
+			// Generic Sunflower plot styles
+			if `i' == 1 file write `scheme`j'' `"sunflowerstyle p1 sunflower"' _n
+			else file write `scheme`j'' `"sunflowerstyle p`i' p`i'"' _n
+
+			} // End Generic parameters
+
+			} // End Loop over theme/scheme file pairs
+
+			// Write the Area Graph characteristics for the number of colors chosen
+			forv i = 1/`pcycles' {
+
+			// Get area color index value
+			loc areaid `: word `i' of `areacolorsseq''
+
+			// Get bar color index value
+			loc barid `: word `i' of `barcolorsseq''
+
+			// Get box plot color index value
+			loc boxid `: word `i' of `boxcolorsseq''
+
+			// Get dot plot color index value
+			loc dotid `: word `i' of `dotcolorsseq''
+
+			// Get line plot color index value
+			loc lineid `: word `i' of `linecolorsseq''
+
+			// Get pie color index value
+			loc pieid `: word `i' of `piecolorsseq''
+
+			// Get scatterplot color index value
+			loc scatid `: word `i' of `scatcolorsseq''
+
+			// Get current symbol
+			loc thissymbol `: word `i' of `symbolseq''
+
+			// Get the area colors
+			mata: brewc.brewColorSearch("`: word `i' of `areargb''")
+
+			// Store all the translated RGB values for area
+			loc areacolor1 `rgb'
+			loc areacolor2 `achromatopsia'
+			loc areacolor3 `protanopia'
+			loc areacolor4 `deuteranopia'
+			loc areacolor5 `tritanopia'
+
+			// Get the area colors
+			mata: brewc.brewColorSearch("`: word `i' of `barrgb''")
+
+			// Store all the translated RGB values for bar graphs
+			loc barcolor1 `rgb'
+			loc barcolor2 `achromatopsia'
+			loc barcolor3 `protanopia'
+			loc barcolor4 `deuteranopia'
+			loc barcolor5 `tritanopia'
+
+			// Get the area colors
+			mata: brewc.brewColorSearch("`: word `i' of `boxrgb''")
+
+			// Store all the translated RGB values for boxplots
+			loc boxcolor1 `rgb'
+			loc boxcolor2 `achromatopsia'
+			loc boxcolor3 `protanopia'
+			loc boxcolor4 `deuteranopia'
+			loc boxcolor5 `tritanopia'
+
+			// Get the area colors
+			mata: brewc.brewColorSearch("`: word `i' of `dotrgb''")
+
+			// Store all the translated RGB values for dot plots
+			loc dotcolor1 `rgb'
+			loc dotcolor2 `achromatopsia'
+			loc dotcolor3 `protanopia'
+			loc dotcolor4 `deuteranopia'
+			loc dotcolor5 `tritanopia'
+
+			// Get the area colors
+			mata: brewc.brewColorSearch("`: word `i' of `linergb''")
+
+			// Store all the translated RGB values for line graphs
+			loc linecolor1 `rgb'
+			loc linecolor2 `achromatopsia'
+			loc linecolor3 `protanopia'
+			loc linecolor4 `deuteranopia'
+			loc linecolor5 `tritanopia'
+
+			// Get the area colors
+			mata: brewc.brewColorSearch("`: word `i' of `piergb''")
+
+			// Store all the translated RGB values for pie graphs
+			loc piecolor1 `rgb'
+			loc piecolor2 `achromatopsia'
+			loc piecolor3 `protanopia'
+			loc piecolor4 `deuteranopia'
+			loc piecolor5 `tritanopia'
+
+			// Get the area colors
+			mata: brewc.brewColorSearch("`: word `i' of `scatrgb''")
+
+			// Store all the translated RGB values for scatterplots
+			loc scatcolor1 `rgb'
+			loc scatcolor2 `achromatopsia'
+			loc scatcolor3 `protanopia'
+			loc scatcolor4 `deuteranopia'
+			loc scatcolor5 `tritanopia'
+
+			// Loop over theme/scheme file pairs
+			forv j = 1/5 {
+
+			/* Connected Plots */
+			// Primary connected plot entries
+			file write `scheme`j'' `"color p`i'area "`areacolor`j''""' _n
+			file write `scheme`j'' `"linewidth p`i'area vvthin"' _n
+			file write `scheme`j'' `"linepattern p`i'area solid"' _n
+			file write `scheme`j'' `"color p`i'arealine "`linecolor`j''""' _n
+			file write `scheme`j'' `"intensity p`i'area inten`areasaturation'"' _n
+
+			// Define scheme colors for bar graphs
+			file write `scheme`j'' `"color p`i' "`barcolor`j''""' _n
+			file write `scheme`j'' `"color p`i'bar "`barcolor`j''""' _n
+			file write `scheme`j'' `"intensity p`i'bar inten`barsaturation'"' _n
+			// file write `scheme1' `"areastyle p`i'bar p`i'bar"' _n
+			file write `scheme`j'' `"seriesstyle p`i'bar p`i'bar"' _n
+			file write `scheme`j'' `"color p`i'barline "0 0 0""' _n
+
+			/* Box Plot Styles */
+			// Primary box plot entries
+			file write `scheme`j'' `"color p`i'box "`boxcolor`j''""' _n
+			file write `scheme`j'' `"intensity box inten`boxsaturation'"' _n
+			file write `scheme`j'' `"linewidth p`i'box medthin"' _n
+			file write `scheme`j'' `"linepattern p`i'box solid"' _n
+			file write `scheme`j'' `"color p`i'boxline "0 0 0""' _n
+			file write `scheme`j'' `"intensity box_line full"' _n
+			file write `scheme`j'' `"symbol p`i'box `thissymbol'"' _n
+			file write `scheme`j'' `"symbolsize p`i'box medium"' _n
+			file write `scheme`j'' `"linewidth p`i'boxmark vthin"' _n
+			file write `scheme`j'' `"color p`i'boxmarkfill "`scatcolor`j''""' _n
+			file write `scheme`j'' `"color p`i'boxmarkline	"0 0 0""' _n
+			file write `scheme`j'' `"gsize p`i'boxlabel vsmall"' _n
+			file write `scheme`j'' `"color p`i'boxlabel "0 0 0""' _n
+			file write `scheme`j'' `"clockdir p`i'box 0"' _n
+
+			// Composite entries for box plots
+			file write `scheme`j'' `"linestyle p`i'box p`i'box"' _n
+			file write `scheme`j'' `"linestyle p`i'boxmark p`i'boxmark"' _n
+			file write `scheme`j'' `"markerstyle p`i'box p`i'box"' _n
+			file write `scheme`j'' `"seriesstyle p`i'box p`i'box"' _n
+
+			// Custom median and whisker entries
+			file write `scheme`j'' `"medtypestyle boxplot line"' _n
+			file write `scheme`j'' `"yesno custom_whiskers yes"' _n
+			file write `scheme`j'' `"linestyle box_whiskers ci"' _n
+			file write `scheme`j'' `"linestyle box_median refline"' _n
+			file write `scheme`j'' `"markerstyle box_marker p`i'box"' _n
+
+			/* Connected Plots */
+			// Primary connected plot entries
+			file write `scheme`j'' `"color p`i'line "`linecolor`j''""' _n
+			file write `scheme`j'' `"yesno p`i'cmissings no"' _n
+			file write `scheme`j'' `"connectstyle p`i' direct"' _n
+
+			// Composite entries for connected plots
+			file write `scheme`j'' `"markerstyle p`i' p`i'"' _n
+			file write `scheme`j'' `"seriesstyle p`i' p`i'"' _n
+			file write `scheme`j'' `"linestyle p`i'connect p`i'"' _n
+			file write `scheme`j'' `"linestyle p`i'mark p`i'line"' _n
+			file write `scheme`j'' `"linewidth p`i' medium"' _n
+			file write `scheme`j'' `"linepattern p`i'line solid"' _n
+
+			/* Connected Plots */
+			// Primary connected plot entries
+			file write `scheme`j'' `"color p`i'dotmarkfill "`dotcolor`j''""' _n
+			file write `scheme`j'' `"linewidth p`i'dotmark vthin"' _n
+			file write `scheme`j'' `"symbol p`i'dot `thissymbol'"' _n
+			file write `scheme`j'' `"symbolsize p`i'dot medium"' _n
+
+			// Composite entries for connected plots
+			file write `scheme`j'' `"linestyle p`i'dotmark p`i'dotmark"' _n
+			file write `scheme`j'' `"markerstyle p`i'dot p`i'dot"' _n
+			file write `scheme`j'' `"seriesstyle p`i'dot p`i'dot"' _n
+
+			/* Connected Plots */
+			// Primary connected plot entries
+			file write `scheme`j'' `"color p`i'lineplot "`linecolor`j''""' _n
+			file write `scheme`j'' `"linewidth p`i'lineplot medium"' _n
+			file write `scheme`j'' `"linepattern p`i'lineplot solid"' _n
+			file write `scheme`j'' `"connectstyle p`i' direct"' _n
+
+			// Primary entries for scatter plots
+			file write `scheme`j'' `"color p`i'pie "`piecolor`j''""' _n
+			file write `scheme`j'' `"color p`i'pieline "0 0 0""' _n
+			file write `scheme`j'' `"intensity pie inten`piesaturation'"' _n
+			file write `scheme`j'' `"areastyle p`i'pie p`i'pie"' _n
+			file write `scheme`j'' `"seriesstyle p`i'pie p`i'pie"' _n
+
+			// Primary entries for scatter plots
+			file write `scheme`j'' `"symbol p`i' `thissymbol'"' _n
+			file write `scheme`j'' `"symbolsize p`i' medium"' _n
+			file write `scheme`j'' `"color p`i'markline "0 0 0""' _n
+			file write `scheme`j'' `"linewidth p`i'mark vthin"' _n
+			file write `scheme`j'' `"color p`i'markfill "`scatcolor`j''""' _n
+			file write `scheme`j'' `"color p`i'label "0 0 0""' _n
+			file write `scheme`j'' `"clockdir p`i' 0"' _n
+
+			// Secondary entries for scatter plots
+			file write `scheme`j'' `"color p`i'shade "`scatcolor`j''""' _n
+			file write `scheme`j'' `"intensity p`i'shade inten`scatsaturation'"' _n
+			file write `scheme`j'' `"linewidth p`i'other vthin"' _n
+			file write `scheme`j'' `"linepattern p`i'other solid"' _n
+			file write `scheme`j'' `"color p`i'otherline "`linecolor`j''""' _n
+
+			// Composite entries for scatter plots
+			file write `scheme`j'' `"linestyle p`i'mark p`i'mark"' _n
+			file write `scheme`j'' `"markerstyle p`i' p`i'"' _n
+			file write `scheme`j'' `"labelstyle p`i' p`i'"' _n
+			file write `scheme`j'' `"seriesstyle p`i' p`i'"' _n
+
+			} // End Loop over theme/scheme file pairs
+
+			} // End Loop to create scatterplot scheme file entries
+
+			// Close and save the graph scheme file
+			file close `scheme1'
+			file close `scheme2'
+			file close `scheme3'
+			file close `scheme4'
+			file close `scheme5'
+						</script>
+					</code>
+				</pre>
+				<aside class="notes">
+					<ul>
+						<li>Wanted to make it possible to diff brewscheme generated files with s2color, so started by recreating s2color.</li>
+						<li>In addition to the arguments passed for colors/markers directly, this also uses other code that is abstracted away from graph specific information</li>
+						<li>There can be an arbitrary number of colors in a palette, but there is a fixed number of files generated, so this gets each color individually</li>
+						<li>Then a libbrewscheme method is called to get all five versions of the color to write to each of the files</li>
+					</ul>
+				</aside>
+			</section>
+			-->
+			<section>
+				<h2>Code Templates</h2>
+				<pre data-id="template-animation" style="width: 65vw; height: 125%; margin-left: -5%;">
+					<code class="hljs" data-trim data-line-numbers="224-255|295-325|329-337|834-852|857-875">
+						<script type="text/template">
+*! eda
+*! v 0.0.10
+*! 17feb2020
+
+// If you don't have the tuples program installed you may want to do that
+// ssc inst tuples, replace
+cap prog drop eda
+
+// Install the estout program for generating tables of statistics
+// ssc inst estout, replace
+prog def eda
+
+	// Version to use for interpretation of code
+	version 14
+
+	// Syntax structure of program
+	syntax [varlist] [using/] [if] [in], Output(string) Root(string)     ///
+	[ IDvars(varlist) STRok STRok2(varlist) MINNsize(passthru) 	     ///
+	MINCat(passthru) MAXCat(passthru) CATVars(passthru) CONTVars(passthru) 	 ///
+	AUTHorname(string) REPOrtname(string) MISSing scheme(passthru) keepgph 	 ///
+	PERCent GRLABLength(passthru) noBARGRaphs BARGRAphopts(string asis)  ///
+	noPIECharts PIECHartopts(string asis) noHISTOgrams 		     ///
+	HISTOGramopts(string asis) KDENSity KDENSOpts(string asis) FIVENUMsum 	 ///
+	FNSOpts(string asis) noDISTROplots DISTROPlotopts(string asis) 	     ///
+	noLADDERplots noSCATterplots LFIT LFIT2(string asis) QFIT            ///
+	QFIT2(string asis) LOWess LOWess2(string asis) FPFIT FPFIT2(string asis) ///
+	LFITCi LFITCi2(string asis) QFITCi QFITCi2(string asis) FPFITCi      ///
+	FPFITCi2(string asis) noBUBBLEplots noBOXplots noMOSAIC noHEATmap    ///
+	COMPile PDFLatex(passthru) BYGraphs(string asis) BYVars(passthru)    ///
+	BYSeq WEIGHTtype(passthru) REBuild DEBug ]
+
+	// List of dependencies needed for the program to execute
+	loc deps tuples spineplot estout brewscheme
+
+	// Loop over dependencies
+	foreach d of loc deps {
+
+		// Test if the user has tuples installed
+		cap which `d'
+
+		// If the user does not have tuples
+		if _rc != 0 {
+
+			// Print error message to screen
+			di as err "You do not have the dependency `d' installed on your machine."
+
+			// Ask user if they would like to install the package
+			di "Would you like to install it now? (Y/N)" _request(depcheck)
+
+			// Loop until a valid response is received
+			while !inlist(`"$depcheck"', "y", "Y", "n", "N") {
+
+				// Print updated error message
+				di "I'm sorry, I do not understand what you would like me to do."
+
+				// As if they would like to install the program again
+				di "Would you like to install `d' now? (Y/N)" _request(depcheck)
+
+			} // End WHILE Loop for invalid responses
+
+			// If they would like to install the dependency
+			if inlist(`"$depcheck"', "y", "Y") {
+
+				// For other dependencies install from SSC
+				if `"`d'"' != "brewscheme" ssc inst `d', replace
+
+				// For brewscheme install from repository
+				else net inst brewscheme, from("http://wbuchanan.github.io/brewscheme")
+
+			} // End IF Block for installation
+
+			// If they do not want to install the dependency
+			else {
+
+				// Print error message to screen
+				di as err "This program cannot execute without its dependencies."
+				di as err "The program will stop running now."
+
+				// Exit the program
+				exit
+
+			} // End ELSE Block for not installing the dependencies
+
+		} // End IF Block for dependency checks
+
+	} // End Loop over dependencies
+
+	// Remove depcheck global
+	glo depcheck ""
+
+	// Preserve the current state of the data in memory
+	preserve
+
+		// If using specified load those data
+		if `"`using'"' != "" qui: use `varlist' `"`using'"', clear
+
+		// Make the sample to use for the program
+		marksample edause, strok novarlist
+
+		// If percentage is not specified set it to frequency
+		if "`percent'" == ""  loc bartype count
+
+		// If turned on set the bartype macro to percent
+		else loc bartype percent
+
+		// If no author name use the system's username
+		if `"`authorname'"' == "" loc authorname `c(username)'
+
+		// If no report name set the report name parameter to the file name
+		if `"`reportname'"' == ""  loc reportname $S_FN
+
+		// Replace Windows style path delimiters in root with *nix path delimiters
+		loc root `: subinstr loc root "\" "/", all'
+
+		// Replace any windows path delimiters with *nix style path delimiters
+		loc reportname `: subinstr loc reportname "\" "/", all'
+
+		// If slow option is enabled, reassign the macro with the sleep command
+		if "`slow'" != "" loc slow sleep 5000
+
+		// Build root directory
+		dirfile `root', p("graphs") `rebuild'
+
+		// Build subdirectory for tables
+		dirfile `root', p("tables") `rebuild'
+
+		// Check for variable list for strings OK
+		if `"`strok'"' != "" & `"`strok2'"' != "" {
+
+			// Remove ID Variables from string variable list
+			loc strvars : list strok2 - idvars
+
+			// Check if varlist option
+			if `"`varlist'"' != "" {
+
+				// Remove variables not passed as part of varlist
+				loc strvars : list strvars & varlist
+
+			} // End IF Block to select only variables in the varlist
+
+			// Loop over string variables
+			foreach i in `strvars' {
+
+				// Create a numeric version
+				qui: encode `i', gen(`i'2)
+
+				// Apply variable label to numeric version of string variable
+				la var `i'2 `"`: var l `i''"'
+
+			} // End Loop over string variables
+
+		} // End IF Block for string ok variable list
+
+		// If user wants any string variable to be considered
+		else if `"`strok'"' != "" & `"`strok2'"' == "" {
+
+			// Get list of all string variables
+			qui: ds, has(type string)
+
+			// Store string variables in local macro for later
+			loc strvars `r(varlist)'
+
+			// Remove any ID variables from string variable list
+			loc strvars : list strvars - idvars
+
+			// Check if varlist option
+			if `"`varlist'"' != "" {
+
+				// Remove variables not passed as part of varlist
+				loc strvars : list strvars & varlist
+
+			} // End IF Block to select only variables in the varlist
+
+			// Loop over string variables
+			foreach i in `strvars' {
+
+				// Create a numeric version
+				qui: encode `i', gen(`i'2)
+
+				// Apply variable label to numeric version of string variable
+				la var `i'2 `"`: var l `i''"'
+
+			} // End Loop over string variables
+
+		} // End ELSEIF Block for all strings OK
+
+		// New way to try identifying categorical vs. continuous variables
+		qui: ds, not(type string)
+
+		// Store the variables in a new local macro
+		loc numvars `r(varlist)'
+
+		// Remove any id variables from the variable list
+		loc numvars : list numvars - idvars
+
+		// Select only variables that are in the variable list and numeric
+		if `"`varlist'"' != "" loc numvars : list numvars & varlist
+
+		// Allocates namespace for tempfile name
+		tempfile edatemp
+
+		// Classify variables as continuous or categorical
+		catorcont `numvars', `minnsize' `mincat' `maxcat' `contvars' 		 ///
+		`catvars' `missing' `grlablength'
+
+		// Store continuous variables
+		loc continuous `r(cont)'
+
+		// Store categorical variables
+		loc categorical `r(cat)'
+
+		// Store number of continuous variables to prevent zero varlists
+		loc contvarcount `: word count `continuous''
+
+		// Store number of categorical variables to prevent zero varlists
+		loc catvarcount `: word count `categorical''
+
+		// Add characteristics to variables to split the var labels for titles
+		grlabsplit `continuous' `categorical', `grlablength'
+
+		// Saves tempfile with characteristics in the data set
+		qui: save `edatemp'.dta, replace
+
+		// Create a new LaTeX File
+		file open doc using `"`root'/`output'.tex"', w replace
+
+		// Write a LaTeX file Heading
+		file write doc "\documentclass[12pt,oneside,fleqn,final,letterpaper]{report}" _n
+		file write doc "\usepackage{pdflscape}" _n
+		file write doc `"\usepackage{tocloft}"' _n
+		file write doc `"\usepackage{titlesec}"' _n
+
+		// Deprecating the use of the fixltx2e package
+		// file write doc `"\usepackage{fixltx2e}"' _n
+		file write doc "\usepackage[letterpaper,margin=0.25in]{geometry}" _n
+		file write doc "\usepackage{graphicx}" _n
+		file write doc "\usepackage[hidelinks]{hyperref}" _n
+		file write doc "\usepackage{longtable}" _n
+		file write doc "\usepackage[toc,page,titletoc]{appendix}" _n
+		file write doc "\usepackage{float}" _n
+		file write doc "\restylefloat{table}" _n
+		file write doc "\DeclareGraphicsExtensions{.pdf, .png}" _n
+		file write doc `"\graphicspath{{"`root'/graphs/"}}"' _n
+		file write doc `"\title{Exploratory Data Analysis of: \\ \normalsize{`reportname'}}"'  _n
+		file write doc `"\author{`authorname'}"' _n
+		file write doc "\let\mypdfximage\pdfximage" _n
+		file write doc "\def\pdfximage{\immediate\mypdfximage}" _n
+		file write doc `"\titleformat{\chapter}[display]"' _n
+		file write doc `"{\centering\normalfont\normalsize\bfseries}{\chaptertitlename\ \thechapter.}{5pt}{}"' _n
+		file write doc `"\titleformat{\section}[display]"' _n
+		file write doc `"{\centering\normalfont\normalsize\bfseries}{}{0pt}{}"' _n
+		file write doc `"\titleformat{\subsection}[hang]"' _n
+		file write doc `"{\normalfont\normalsize\bfseries}{}{0pt}{}"' _n
+		file write doc `"\titleformat{\subsubsection}[runin]"' _n
+		file write doc `"{\normalfont\normalsize\bfseries}{}{0pt}{}[.\rule{0.5em}{0pt}]"' _n
+		file write doc `"\titleformat{\paragraph}[runin]"' _n
+		file write doc `"{\normalfont\normalsize\bfseries\itshape}{}{0pt}{}[.\rule{0.5em}{0pt}]"' _n
+		file write doc `"\titleformat{\subparagraph}[runin]"' _n
+		file write doc `"{\normalfont\normalfont\itshape}{}{0pt}{}[.\rule{0.5em}{0pt}]"' _n
+		file write doc `"\titlespacing{\chapter}{0em}{*0}{*0}"' _n
+		file write doc `"\titlespacing{\section}{0em}{*0}{*0}"' _n
+		file write doc `"\titlespacing{\subsection}{0em}{*0}{*0}"' _n
+		file write doc `"\titlespacing{\subsubsection}{1.5em}{*0}{*0}"' _n
+		file write doc `"\titlespacing{\paragraph}{1.5em}{*0}{*0}"' _n
+		file write doc `"\setcounter{tocdepth}{5}"' _n
+		file write doc `"\setcounter{LTchunksize}{50}"' _n
+		file write doc "\begin{document}" _n
+		file write doc "\begin{titlepage} \maketitle \end{titlepage}" _n
+		file write doc "\newpage\clearpage \addtocontents{toc}{\protect\hypertarget{toc}{}} \tableofcontents \newpage\clearpage" _n
+		file write doc "\addtocontents{tof}{\protect\hypertarget{tof}{}} \listoffigures \newpage\clearpage" _n
+		file write doc "\addtocontents{tot}{\protect\hypertarget{tot}{}} \listoftables \newpage\clearpage" _n
+
+		// Make sure the data are stored more efficiently
+		qui: compress
+
+		// Check for univariate graphs
+		if inlist("", "`bargraphs'", "`piecharts'", "`histograms'", ///
+		"`distroplots'", "`ladderplots'") == 1 {
+
+			// Add univariate to macro
+			loc graphs "univariate"
+
+		} // End IF Block for univariate graphs
+
+		// Check for bivariate graphs
+		if inlist("", "`scatterplots'", "`bubbleplots'", "`boxplots'", ///
+		"`mosaic'", "`heatmap'") == 1 {
+
+			// Add bivariate to graphs macro
+			loc graphs `graphs' "bivariate"
+
+		} // End IF Block to check for graphs
+
+		// If any graphs are going to be drawn
+		if `"`graphs'"' != "" {
+
+			// Add a graphs chapter header and set
+			file write doc "\chapter{Graphs} \newpage\clearpage" _n
+
+			// Check for univariate graphs
+			if inlist("univariate", "`: word 1 of `graphs''") == 1 {
+
+				// Add entry for univariate distributions
+				file write doc "\section{Single Variable Graphs} \newpage\clearpage" _n
+
+			} // End IF Block for univariate graphs
+
+			// Check for only bivariate graphs
+			else if "`graphs'" == "bivariate" {
+
+				// Add entry for univariate distributions
+				file write doc "\section{Multi-Variable Graphs} \newpage\clearpage" _n
+
+			} // End ELSE IF Block for multivariable graphs only
+
+			// Change the page orientation to landscape
+			file write doc "\begin{landscape}" _n
+
+		} // End IF Block for graphs macro
+
+		// If Block for categorical variable sub header
+		if inlist("", "`bargraphs'", "`piecharts'") {
+
+			// Add subsubsection header for categorical data
+			file write doc "\subsection{Categorical Variables} \newpage\clearpage" _n
+
+		} // End IF Block for categorical variables sub header
+
+		// Check if user wants bargraphs
+		if "`bargraphs'" != "nobargraphs" & !inlist(`catvarcount', 0, .) {
+
+			// Call Bar graph subroutine
+			edabar `categorical' if `edause', root(`root') `bargraphopts' 	 ///
+			bart(`bartype') `scheme' 		 ///
+			`keepgph' `debug'
+
+		} // End IF Block for bar graph creation
+
+		// Check if user wants pie charts
+		if "`piecharts'" != "nopiecharts" & !inlist(`catvarcount', 0, .) {
+
+			// Call Pie chart subroutine
+			edapie `categorical' if `edause', root(`root') `piechartopts' 	 ///
+			`scheme' `keepgph' `debug'
+
+		} // End IF Block for pie charts option
+
+		// If Block for continuous variable sub header
+		if inlist("", "`histograms'", "`distroplots'", "`ladderplots'") == 1 {
+
+			// Add subheading to the LaTeX file
+			file write doc "\subsection{Continuous Variables} \newpage\clearpage" _n
+
+		} // End IF Block for continuous variable sub header
+
+		// Check if user wants histograms
+		if "`histograms'" != "nohistograms" & !inlist(`contvarcount', 0, .) {
+
+			// Call histogram subroutine
+			edahist `continuous' if `edause', `histogramopts' `scheme' 		 ///
+			root(`root') `kdensity' kdensopts(`kdensopts') `fivenumsum' 	 ///
+			fnsopts(`fnsopts') `debug'
+
+		} // End IF Block for histograms
+
+		// Check for distroplots option
+		if "`distroplots'" != "nodistroplots" & !inlist(`contvarcount', 0, .) {
+
+			// Call distribution plot subroutine
+			edadistro `continuous' if `edause', root(`root') `scheme' 		 ///
+			`keepgph' distrop(`distroplotopts') `debug'
+
+		} // End IF Block for distribution plots
+
+		// Check for ladders
+		if "`ladderplots'" != "noladderplots" & !inlist(`contvarcount', 0, .) {
+
+			// Call subroutine for ladders of power graphs
+			edaladder `continuous' if `edause', `scheme' `histogramopts' 	 ///
+			root(`root') `debug'
+
+		} // End IF Block for ladder of power graphs
+
+		// If Block for bivariate graphs
+		if "`: word 2 of `graphs''" == "bivariate" {
+
+			// Header for bivariate/conditional distribution graphs
+			file write doc "\section{Multi-Variable Graphs} \newpage\clearpage" _n
+
+		} // End IF Block for bivariate subheader with univariate graphs
+
+		// Check for scatter plot option
+		if "`scatterplots'" != "noscatterplots" & !inlist(`contvarcount', 0, .) {
+
+			// Call to scatterplot subroutine
+			edascat `continuous' if `edause', `lfit' lfit2(`lfit2') `qfit' ///
+			qfit2(`qfit2') `lowess' lowess2(`lowess2') `fpfit' 	       ///
+			fpfit2(`fpfit2') `lfitci' lfitci2(`lfitci2') `qfitci'	       ///
+			qfitci2(`qfitci2') `fpfitci' fpfitci2(`fpfitci2') root(`root') ///
+			`scheme' `keepgph' `debug'
+
+		} // End IF Block for scatter plots
+
+		// Check for bubble plots
+		if "`bubbleplots'" != "nobubbleplots" & !inlist(`contvarcount', 0, .) {
+
+			// Call subroutine for bubble plots
+			edabubble `continuous' if `edause', root(`root') `scheme' 		 ///
+			`keepgph' `debug'
+
+		} // End IF Block for bubble plots
+
+		// Check distro plots again
+		if "`distroplots'" != "nodistroplots" & !inlist(`contvarcount', 0, .) {
+
+			// Call subroutine for joint distribution plots
+			edadistro `continuous' if `edause', nounivariate root(`root') 	 ///
+			`scheme' `keepgph' distrop(`distroplotopts') `debug'
+
+		} // End IF Block for quantile-quantile plots
+
+		// Option to generate box plots
+		if "`boxplots'" != "noboxplots" & (!inlist(`contvarcount', 0, .) & 	 ///
+		!inlist(`catvarcount', 0, .)) {
+
+			// Create Box Plots
+			edabox if `edause', cat(`categorical') cont(`continuous') 		 ///
+			root(`root') `scheme' `keepgph' `debug'
+
+		} // End IF Block for box plots
+
+		// Check for mosiac/spine plots
+		if "`mosaic'" != "nomosaic" & !inlist(`catvarcount', 0, .) {
+
+			// Subroutine used to generate mosaic/spine plots
+			edamosaic `categorical' if `edause', root(`root') `scheme'  	 ///
+			`missing' `percent'	`keepgph' `debug'
+
+		} // End IF Block for mosaic plot creation
+
+		// Check for correlation heatmap option
+		if "`heatmap'" != "noheatmap" & !inlist(`contvarcount', 0, ., 1, 2) {
+
+			// Create heatmap from continuous variables
+			edaheat `continuous' if `edause', root(`root') `keepgph' `debug'
+
+			// Reloads the tempfile with the characteristics saved
+			qui: use `edatemp'.dta, clear
+
+		} // End IF Block for correlation heatmap option
+
+		// If any graphs are going to be drawn
+		if `"`graphs'"' != "" {
+
+			// Change back to portrait page layout
+			file write doc "\end{landscape}" _n
+
+		} // End IF Block to reorient pages after graphs section
+
+		// Check for by graphs
+		if "`bygraphs'" != "" & "`byvars'" != "" {
+
+			// Check if user wants bargraphs
+			if "`bargraphs'" != "nobargraphs" & !inlist(`catvarcount', 0, .) ///
+			& inlist("bar", `"`: subinstr loc bygraphs `" "' `"", ""''"') == 1 {
+
+				// Call Bar graph subroutine
+				edabar `categorical' if `edause', `bargraphopts' `byvars'	 ///
+				root(`root') bart(`bartype') `scheme' `keepgph' `byseq' `debug'
+
+			} // End IF Block for bar graph creation
+
+			// Check if user wants pie charts
+			if "`piecharts'" != "nopiecharts" & !inlist(`catvarcount', 0, .) ///
+			& inlist("pie", `"`: subinstr loc bygraphs `" "' `"", ""''"') == 1 {
+
+				// Call Pie chart subroutine
+				edapie `categorical' if `edause', `piechartopts'			 ///
+				`scheme' `keepgph' root(`root') `byvars' `byseq' `debug'
+
+			} // End IF Block for pie charts option
+
+			// Add subheading to the LaTeX file
+			file write doc "\subsection{Continuous Variables} \newpage\clearpage" _n
+
+			// Check if user wants histograms
+			if "`histograms'" != "nohistograms" & !inlist(`contvarcount', 0, .) ///
+			& inlist("histogram", `"`: subinstr loc bygraphs `" "' `"", ""''"') == 1 {
+
+				// Call histogram subroutine
+				edahist `continuous' if `edause', `histogramopts' `scheme' 	 ///
+				`kdensity' kdensopts(`kdensopts') `fivenumsum' `byvars'		 ///
+				fnsopts(`fnsopts') root(`root') `byseq' `debug'
+
+			} // End IF Block for histograms
+
+			// Check for scatter plot option
+			if "`scatterplots'" != "noscatterplots" & !inlist(`contvarcount', 0, .)  ///
+			& inlist("scatterplot", `"`: subinstr loc bygraphs `" "' `"", ""''"') == 1 {
+
+				// Call to scatterplot subroutine
+				edascat `continuous' if `edause', `lfit' `lfit2' `qfit' 	 ///
+				`qfit2' `lowess' `lowess2' `fpfit' `fpfit2' `lfitci' 		 ///
+				`lfitci2' `qfitci' `qfitci2' `fpfitci' `fpfitci2' 			 ///
+				root(`root') `scheme' `keepgph' `byvars' `byseq' `debug'
+
+			} // End IF Block for scatter plots
+
+			// Check for bubble plots
+			if "`bubbleplots'" != "nobubbleplots" & !inlist(`contvarcount', 0, .)  ///
+			& inlist("bubble", `"`: subinstr loc bygraphs `" "' `"", ""''"') == 1 {
+
+				// Call subroutine for bubble plots
+				edabubble `continuous' if `edause', `scheme' `keepgph'		 ///
+				root(`root') `byvars' `byseq' `debug'
+
+			} // End IF Block for bubble plots
+
+			// Option to generate box plots
+			if "`boxplots'" != "noboxplots" & (!inlist(`contvarcount', 0, .) ///
+			& !inlist(`catvarcount', 0, .)) 								 ///
+			& inlist("boxplot", `"`: subinstr loc bygraphs `" "' `"", ""''"') == 1 {
+
+				// Create Box Plots
+				edabox if `edause', cat(`categorical') cont(`continuous') 	 ///
+				`scheme' `keepgph'  root(`root') `byvars' `byseq' `debug'
+
+			} // End IF Block for box plots
+
+			// Check for mosiac/spine plots
+			if "`mosaic'" != "nomosaic" & !inlist(`catvarcount', 0, .) 		 ///
+			& inlist("mosaic", `"`: subinstr loc bygraphs `" "' `"", ""''"') == 1 {
+
+				// Subroutine used to generate mosaic/spine plots
+				edamosaic `categorical' if `edause', `scheme' `missing'  	 ///
+				`percent'	`keepgph' root(`root') `byvars' `byseq' `debug'
+
+			} // End IF Block for mosaic plot creation
+
+		} // End IF Block for by graphs
+
+		// Create next section/subsection headers
+		file write doc "\chapter{Descriptive Statistics} \newpage\clearpage" _n
+
+		// Adjust variable labels since they get used in the tables
+		foreach v of var `categorical' `continuous' {
+
+			// Get LaTeX sanitized string of the variable label
+			texclean `"`: var l `v''"'
+
+			// Relabel the variable
+			la var `v' `"`r(clntex)'"'
+
+		} // End Loop to relabel variables
+
+		// Check for categorical variables
+		if !inlist(`catvarcount', 0, .) {
+
+			// Add categorical variable header
+			file write doc "\section{Categorical Variables} \newpage\clearpage" _n
+
+			// Set counter to force page dumps from LaTeX
+			loc counter = 0
+
+			// Create statistical summaries of all categorical variables
+			foreach v of var `categorical' {
+
+				// Increment counter
+				loc counter = `counter' + 1
+
+				// If table require more than 6 columns change page orientation
+				if `: char `v'[nvals]' >= 5 file write doc `"\begin{landscape}"' _n
+
+				// Use estpost to post the results of the tabulation
+				qui: estpost ta `v' if `edause', mi notot
+
+				// Export table to LaTeX file
+				qui: esttab . using `"`root'/tables/tab`v'.tex"', uns noobs  ///
+				longtable varlabels(`e(labels)') eql("`v'") ml(, none) 		 ///
+				nonum cells("b pct(fmt(a3))") replace 		 ///
+				coll("Frequency" "Percentage") ti(`"Distribution of `: var l `v''"')
+
+				// Add the table to the LaTeX document
+				file write doc "\begin{table}[H]" _n
+				file write doc `"\input{"`root'/tables/tab`v'"}"' _n
+				file write doc "\end{table}" _n
+				file write doc "\hyperlink{tot}{Back to List of Tables}" _n
+				file write doc "\hyperlink{toc}{Back to Table of Contents}" _n
+
+				// If table require more than 6 columns revert page orientation
+				if `: char `v'[nvals]' >= 5 file write doc `"\end{landscape}"' _n
+
+				// Add page break if there are three floats
+				if mod(`counter',  3) == 0 file write doc "\clearpage" _n
+
+			} // End Loop to build one-way tables
+
+			// Generate all of the two-way permutations
+			tuples `categorical', asis min(2) max(2) cvp
+
+			// Set counter to force page dumps from LaTeX
+			loc counter = 0
+
+			// Create two-way tables
+			forv i = 1/`ntuples' {
+
+				// Increment counter
+				loc counter = `counter' + 1
+
+				// Get the first variable
+				loc y : word 1 of `tuple`i''
+
+				// Get the second variable
+				loc x : word 2 of `tuple`i''
+
+				// Create cross-tabulation
+				qui: estpost ta `y' `x' if `edause', mi notot
+
+				// If table requires more than 6 columns change page orientation
+				if `: char `x'[nvals]' >= 5 file write doc `"\begin{landscape}"' _n
+
+				// Create cross-tabulation
+				qui: estpost ta `y' `x' if `edause', mi notot
+
+				// Export frequency cross tab to file
+				qui: esttab . using `"`root'/tables/tab-`y'-`x'.tex"', 		 ///
+				varlabels(`e(labels)') eql(`e(eqlabels)') ml(, none) nonum   ///
+				cells("b") coll("Frequency") noobs uns longtable replace	 ///
+				ti(`"Frequency of `: var l `y'' by `: var l `x''"') 		 ///
+
+				// Create cross-tabulation
+				qui: estpost ta `y' `x' if `edause', mi notot
+
+				// Export Joint Percentages
+				qui: esttab . using `"`root'/tables/tab-`y'-`x'.tex"',  	 ///
+				varlabels(`e(labels)') eql(`e(eqlabels)') ml(, none) nonum   ///
+				cells("pct(fmt(a3))") coll("Overall\%") noobs uns longtable  ///
+				ti(`"Overall \% of `: var l `y'' by `: var l `x''"') append	 ///
+
+				// Create cross-tabulation
+				qui: estpost ta `y' `x' if `edause', mi notot
+
+				// Export Column-Wise marginal percentages to file
+				qui: esttab . using `"`root'/tables/tab-`y'-`x'.tex"',  	 ///
+				varlabels(`e(labels)') eql(`e(eqlabels)') ml(, none) nonum   ///
+				cells("colpct(fmt(a3))") coll("Column\%") noobs uns longtable ///
+				ti(`"Column \% of `: var l `y'' by `: var l `x''"') append	 ///
+
+				// Create cross-tabulation
+				qui: estpost ta `y' `x' if `edause', mi notot
+
+				// Export Row-Wise marginal percentages to file
+				qui: esttab . using `"`root'/tables/tab-`y'-`x'.tex"', 		 ///
+				varlabels(`e(labels)') eql(`e(eqlabels)') ml(, none) nonum   ///
+				cells("rowpct(fmt(a3))") coll("Row\%") noobs uns longtable 	 ///
+				ti(`"Row \% of `: var l `y'' by `: var l `x''"') append		 ///
+
+				// Add the table to the LaTeX document
+				file write doc "\begin{table}[H]" _n
+				file write doc `"\input{"`root'/tables/tab-`y'-`x'"}"' _n
+				file write doc "\end{table}" _n
+				file write doc "\hyperlink{tot}{Back to List of Tables}" _n
+				file write doc "\hyperlink{toc}{Back to Table of Contents}" _n
+
+				// If table require more than 6 columns revert page orientation
+				if `: char `x'[nvals]' >= 5 file write doc `"\end{landscape}"' _n
+
+				// Add page break if there are three floats
+				if mod(`counter', 3) == 0 file write doc "\clearpage" _n
+
+			} // End Loop for two way tables
+
+		} // End IF Block for categorical variables
+
+		// Check for categorical variables
+		if !inlist(`contvarcount', 0, .) {
+
+			// Add section header in file
+			file write doc "\section{Continuous Variables} \newpage\clearpage" _n
+
+			// Create summary statistics table for continuous variables
+			qui: estpost su `continuous' if `edause', de  quietly
+
+			// Create LaTeX table of parametric descriptive stats
+			qui: esttab . using `"`root'/tables/descriptives.tex"', nonum    ///
+			nomti noobs ti("Descriptive Statistics of Continuous Variables") ///
+			cells("count mean(fmt(3)) sd(fmt(3))") label replace longtable 	 ///
+			varlabels(`e(labels)') collab("N" "$\mu$" "$\sigma$") nodep		 ///
+			addn("$\mu$ = Average $\sigma$ = Standard Deviation") 			 ///
+
+			// Create summary statistics table for continuous variables
+			qui: estpost su `continuous' if `edause', de  quietly
+
+			// Create table of higher order moment conditions
+			qui: esttab . using `"`root'/tables/higherorder.tex"', nomti   	 ///
+			label cells("skewness(fmt(3)) kurtosis(fmt(3))") replace nonum 	 ///
+			collab("Skewness" "Kurtosis") longtable varlabels(`e(labels)')	 ///
+			ti("Higher Order Moment Conditions") noobs nodep
+
+			// Create summary statistics table for continuous variables
+			qui: estpost su `continuous' if `edause', de  quietly
+
+			// Create LaTeX table of non-parametric stats
+			qui: esttab . using `"`root'/tables/orderstats.tex"', nomti  	 ///
+			label ti("Order Statistics") nonum  varlabels(`e(labels)') 		 ///
+			longtable collab("Min." "25\%ile" "Median" "75\%ile" "Max")		 ///
+			cells("min(fmt(3)) p25(fmt(3)) p50(fmt(3)) p75(fmt(3)) max(fmt(3))") ///
+			addn("This is also known as Tukey's Five Number Summary") 		 ///
+			noobs replace nodep
+
+			// Create correlation matrix
+			// estpost correlate `continuous', matrix
+
+			// Create LaTeX table of the correlations table
+			// esttab . using correlationtable.tex, not unstack compress noobs
+
+			// Add both tables to LaTeX document
+			file write doc "\begin{table}[H]" _n
+			file write doc `"\input{"`root'/tables/descriptives"}"' _n
+			file write doc "\end{table}" _n
+			file write doc "\hyperlink{tot}{Back to List of Tables}" _n
+			file write doc "\hyperlink{toc}{Back to Table of Contents}" _n
+			file write doc "\begin{table}[H]" _n
+			file write doc `"\input{"`root'/tables/higherorder"}"' _n
+			file write doc "\end{table}" _n
+			file write doc "\hyperlink{tot}{Back to List of Tables}" _n
+			file write doc "\hyperlink{toc}{Back to Table of Contents}" _n
+			file write doc "\begin{table}[H]" _n
+			file write doc `"\input{"`root'/tables/orderstats"}"' _n
+			file write doc "\end{table}" _n
+			file write doc "\hyperlink{tot}{Back to List of Tables}" _n
+			file write doc "\hyperlink{toc}{Back to Table of Contents}" _n
+			file write doc "\clearpage" _n
+
+		} // End IF Block for continuous variables
+
+		// Check for categorical variables
+		if !inlist(`catvarcount', 0, .) & !inlist(`contvarcount', 0, .) {
+
+			// Add file header for conditional distributions
+			file write doc "\section{Conditional Descriptive Statistics} \newpage\clearpage" _n
+
+			// Set the maximum matrix size to prevent a matsize error in the loop below
+			set matsize 11000
+
+			// Increment counter
+			loc counter = 0
+
+			// Create conditional descriptive statistics
+			foreach cat of var `categorical' {
+
+				// Get new varname with underscores escaped
+				loc thiscatvar "`= ustrregexra("`cat'", "_", "\_")'"
+
+				// Adds the subsection name to the LaTeX document
+				file write doc `"\subsection{Tables by groups of `thiscatvar'}"' _n
+
+				// If table require more than 6 columns change page orientation
+				if `: char `cat'[nvals]' >= 5 file write doc `"\begin{landscape}"' _n
+
+				// Increment counter
+				loc counter = `counter' + 1
+
+				// Get means/SDs for each category in variable cat
+				qui: estpost tabstat `continuous' if `edause', by(`cat') 	 ///
+				s(mean) c(s)
+
+				// Create the output table
+				qui: esttab . using `"`root'/tables/condmean`cat'.tex"',  	 ///
+				nomti nonum main(mean) nostar uns longtable replace	label	 ///
+				coll(`e(labels)') addn(" ") noobs 			 ///
+				ti("Averages by groups of `: var l `cat''")
+
+				// Add table to LaTeX document
+				file write doc "\begin{table}[H]" _n
+				file write doc `"\input{"`root'/tables/condmean`cat'"}"' _n
+				file write doc "\end{table}" _n
+				file write doc "\hyperlink{tot}{Back to List of Tables}" _n
+				file write doc "\hyperlink{toc}{Back to Table of Contents}" _n
+
+				// Get means/SDs for each category in variable cat
+				qui: estpost tabstat `continuous', by(`cat') s(sd) c(s)
+
+				// Create the output table
+				qui: esttab . using `"`root'/tables/condsd`cat'.tex"', 		 ///
+				nomti nonum main(sd) nostar uns longtable replace label		 ///
+				coll(`e(labels)')  addn(" ") noobs 		 ///
+				ti("Standard Deviations by groups of `: var l `cat''")
+
+				// Add table to LaTeX document
+				file write doc "\begin{table}[H]" _n
+				file write doc `"\input{"`root'/tables/condsd`cat'"}"' _n
+				file write doc "\end{table}" _n
+				file write doc "\hyperlink{tot}{Back to List of Tables}" _n
+				file write doc "\hyperlink{toc}{Back to Table of Contents}" _n
+
+				// If table require more than 6 columns revert page orientation
+				if `: char `cat'[nvals]' >= 5 file write doc `"\end{landscape}"' _n
+
+				// Check if there are three floats add page break
+				if mod(`counter', 3) == 0 file write doc "\clearpage" _n
+
+			} // End Loop for conditional descriptive statistics
+
+		} // End IF Block for categorical and continuous variables
+
+		// Add ending to LaTeX file
+		file write doc "\end{document}"
+
+		// Close and save the LaTeX document
+		file close doc
+
+		// Check for option to compile LaTeX file
+		if "`compile'" != "" {
+
+			// Create bash/batch script to compile source
+			maketexcomp "`root'/`output'", scr(`"`root'/makeLaTeX"')		 ///
+			`pdflatex' root(`root')
+
+			// Local with code to execute compiler script
+			loc exec `r(comp)'
+
+			// Execute the compile script to make the LaTeX turn into a PDF
+			`exec'
+
+		} // End IF Block for compilation option
+
+	// Restore data to original state
+	restore
+
+// End program definition
+end
+
+/******************************************************************************
+*                            From edabar.ado                                  *
+******************************************************************************/
+// If the byvars parameter has no arguments
+if "`byvars'" == "" {
+
+	// Add subsubsection header for categorical data
+	file write doc "\subsubsection{Bar Graphs} \newpage\clearpage" _n
+
+	// Create bar graphs for the categorical variables
+	foreach v of var `varlist' {
+
+		// Define a macro used to set legend parameters
+		loc leg legend(rows(`:char `v'[lrows]') symy(1.85) symx(1.85))
+
+		// Create the histogram
+		gr bar (`bartype') if `touse', over(`v') asyvars `bargraphopts'  ///
+		`scheme' ti(`: char `v'[title]') `leg' `missing'				 ///
+		note("Created on: `c(current_date)' at: `c(current_time)'")
+
+		// Export to .pdf file
+		qui: gr export `"`root'/graphs/bar`v'.pdf"', as(pdf) replace
+
+		// Get prepped version of the variable name
+		texclean `"`v'"', r
+
+		// Store variable name in local macro ref
+		loc ref `r(clntex)'
+
+		// Get the cleaned variable label
+		texclean `"`: var l `v''"'
+
+		// Store the cleaned variable label
+		loc cap `r(clntex)'
+
+		// Add the graph to the LaTeX file
+		file write doc "\begin{figure}[h!]" _n
+		file write doc `"\caption{`cap' \label{fig:bar`v'}}"' _n
+		file write doc `"\includegraphics[width=\textwidth]{bar`v'.pdf}"' _n
+		file write doc "\end{figure}" _n
+		file write doc "\hyperlink{tof}{Back to List of Figures}" _n
+		file write doc "\hyperlink{toc}{Back to Table of Contents}\newpage\clearpage" _n
+
+		// Check if user wants to keep the GPH files
+		if "`keepgph'" != "" qui: gr save `"`root'/graphs/bar`v'.gph"', replace
+
+	} // End loop over categorical variables
+
+} // End IF Block for single variable
+						</script>
+					</code>
+				</pre>
+				<aside class="notes">
+					<ul>
+						<li>eda generates the LaTeX file that will result in the report</li>
+						<li>Depending on options, additional syntax is added to the LaTeX document</li>
+						<li>Then subroutines are called which generate the output, as well as additional source code</li>
+						<li>The first thing added is another bookmark that defines what type of output appears in the section</li>
+						<li>Then captions and bookmark references are generated dynamically in the document</li>
+					</ul>
+				</aside>
+			</section>
+			<!-- Java based reflection
+			<section data-auto-animate style="display: none !important; visibility: hidden;">
+				<h2 data-id="code-title">Stata/Java "Reflection"</h2>
+				<pre data-id="reflection-animation" style="width: 65vw; height: 125%; margin-left: -5%;">
+					<code class="hljs java" data-trim data-line-numbers="10-31|246-273|314-317|324-355">
+						<script type="text/template">
+						package org.paces.Stata.StringUtils.PhoneticEncoding;
+
+						import com.stata.sfi.Data;
+						import org.paces.Stata.MetaData.Meta;
+
+						import java.lang.reflect.InvocationTargetException;
+						import java.lang.reflect.Method;
+						import java.util.StringJoiner;
+
+						/**
+						* Class used to phonetically encode strings
+						* See http://commons.apache.org/proper/commons-codec/apidocs/index.html
+						* for additional information.
+						* @author Billy Buchanan
+						* @version 0.0.0
+						*/
+						public class StringEncoders {
+
+							/**
+							* String reference used to initialize Caverphone1 class object.  See
+							* http://commons.apache.org/proper/commons-codec/apidocs/org/apache/commons/codec/language/Caverphone1.html
+							* for additional information.
+							*/
+							public final String cav1 = "org.apache.commons.codec.language.Caverphone1";
+
+							/**
+							* String reference used to initialize Caverphone2 class object.  See
+							* http://commons.apache.org/proper/commons-codec/apidocs/org/apache/commons/codec/language/Caverphone2.html
+							* for additional information.
+							*/
+							public final String cav2 = "org.apache.commons.codec.language.Caverphone2";
+
+							/**
+							* String reference used to initialize Cologne Phonetic encoding class
+							* objects.  See
+							* http://commons.apache.org/proper/commons-codec/apidocs/org/apache/commons/codec/language/ColognePhonetic.html
+							* for additional information.
+							*/
+							public final String koln = "org.apache.commons.codec.language.ColognePhonetic";
+
+							/**
+							* String reference used to initialize Daitch Mokotoff Soundex class
+							* object.  See
+							* http://commons.apache.org/proper/commons-codec/apidocs/org/apache/commons/codec/language/DaitchMokotoffSoundex.html
+							* for additional information.
+							*/
+							public final String dmSoundex = "org.apache.commons.codec.language.DaitchMokotoffSoundex";
+
+							/**
+							* String reference used to initialize Double Metaphone class object.  See
+							* http://commons.apache.org/proper/commons-codec/apidocs/org/apache/commons/codec/language/DoubleMetaphone.html
+							* for additional information.
+							*/
+							public final String dblMetaphone = "org.apache.commons.codec.language.DoubleMetaphone";
+
+							/**
+							* String reference used to initialize Match Rating Approach encoder.  See
+							* http://commons.apache.org/proper/commons-codec/apidocs/org/apache/commons/codec/language/MatchRatingApproachEncoder.html
+							* for additional information
+							*/
+							public final String matchRating = "org.apache.commons.codec.language.MatchRatingApproachEncoder";
+
+							/**
+							* String reference used to initialize Metaphone class object.  See
+							* http://commons.apache.org/proper/commons-codec/apidocs/org/apache/commons/codec/language/Metaphone.html
+							* for additional information
+							*/
+							public final String metaphone = "org.apache.commons.codec.language.Metaphone";
+
+							/**
+							* String reference used to initialize Nysiis class object.  See
+							* http://commons.apache.org/proper/commons-codec/apidocs/org/apache/commons/codec/language/Nysiis.html
+							* for additional information
+							*/
+							public final String nysiis = "org.apache.commons.codec.language.Nysiis";
+
+							/**
+							* String reference used to initialize Beider Morse class object.  See
+							* http://commons.apache.org/proper/commons-codec/apidocs/index.html
+							* for additional information
+							*/
+							public final String bmEncode = "org.apache.commons.codec.language.bm.BeiderMorseEncoder";
+
+							/**
+							* Object used to retrieve data from the dataset that is active in memory
+							*/
+							private Meta metaData;
+
+							/**
+							* Class constructor
+							* @param metadata A meta class object used to access the data that is
+							*                    active in memory in Stata.
+							*/
+							public StringEncoders(Meta metadata) {
+								this.metaData = metadata;
+							}
+
+							/**
+							* Method that returns a Match Rating Approach encoded string
+							* @param varname A variable name to use when initializing the variable
+							* @throws ClassNotFoundException Error thrown if the codec class is not
+							* found
+							* @throws NoSuchMethodException Error thrown if the codec class is not
+							* found (each of the classes implements the method encode that accepts a
+							* string argument)
+							* @throws IllegalAccessException Error thrown by the reflections
+							* implementation
+							* @throws InstantiationException Error thrown if there is an issue
+							* creating a new instance of the class object
+							* @throws InvocationTargetException Error thrown if there is an issue
+							* invoking the encode method of the object
+							*/
+							public void matchRating(String varname)
+							throws ClassNotFoundException, NoSuchMethodException,
+							IllegalAccessException, InstantiationException,
+							InvocationTargetException {
+								encoder(varname, matchRating);
+							}
+
+
+							/**
+							* Method that returns a Beider Morse Encoded String
+							* @param varname A variable name to use when initializing the variable
+							* @throws ClassNotFoundException Error thrown if the codec class is not
+							* found
+							* @throws NoSuchMethodException Error thrown if the codec class is not
+							* found (each of the classes implements the method encode that accepts a
+							* string argument)
+							* @throws IllegalAccessException Error thrown by the reflections
+							* implementation
+							* @throws InstantiationException Error thrown if there is an issue
+							* creating a new instance of the class object
+							* @throws InvocationTargetException Error thrown if there is an issue
+							* invoking the encode method of the object
+							*/
+							public void beiderMorse(String varname)
+							throws ClassNotFoundException, NoSuchMethodException,
+							IllegalAccessException, InstantiationException,
+							InvocationTargetException {
+								encoder(varname, bmEncode);
+							}
+
+							/**
+							* Method that returns a Nysiis Encoded String
+							* @param varname A variable name to use when initializing the variable
+							* @throws ClassNotFoundException Error thrown if the codec class is not
+							* found
+							* @throws NoSuchMethodException Error thrown if the codec class is not
+							* found (each of the classes implements the method encode that accepts a
+							* string argument)
+							* @throws IllegalAccessException Error thrown by the reflections
+							* implementation
+							* @throws InstantiationException Error thrown if there is an issue
+							* creating a new instance of the class object
+							* @throws InvocationTargetException Error thrown if there is an issue
+							* invoking the encode method of the object
+							*/
+							public void nysiis(String varname)
+							throws ClassNotFoundException, NoSuchMethodException,
+							IllegalAccessException, InstantiationException,
+							InvocationTargetException {
+								encoder(varname, nysiis);
+							}
+
+							/**
+							* Method that returns a Metaphone Encoded String
+							* @param varname A variable name to use when initializing the variable
+							* @throws ClassNotFoundException Error thrown if the codec class is not
+							* found
+							* @throws NoSuchMethodException Error thrown if the codec class is not
+							* found (each of the classes implements the method encode that accepts a
+							* string argument)
+							* @throws IllegalAccessException Error thrown by the reflections
+							* implementation
+							* @throws InstantiationException Error thrown if there is an issue
+							* creating a new instance of the class object
+							* @throws InvocationTargetException Error thrown if there is an issue
+							* invoking the encode method of the object
+							*/
+							public void metaphone(String varname)
+							throws ClassNotFoundException, NoSuchMethodException,
+							IllegalAccessException, InstantiationException,
+							InvocationTargetException {
+								encoder(varname, metaphone);
+							}
+
+							/**
+							* Method that returns a Double Metaphone Encoded String
+							* @param varname A variable name to use when initializing the variable
+							* @throws ClassNotFoundException Error thrown if the codec class is not
+							* found
+							* @throws NoSuchMethodException Error thrown if the codec class is not
+							* found (each of the classes implements the method encode that accepts a
+							* string argument)
+							* @throws IllegalAccessException Error thrown by the reflections
+							* implementation
+							* @throws InstantiationException Error thrown if there is an issue
+							* creating a new instance of the class object
+							* @throws InvocationTargetException Error thrown if there is an issue
+							* invoking the encode method of the object
+							*/
+							public void doubleMetaphone(String varname)
+							throws ClassNotFoundException, NoSuchMethodException,
+							IllegalAccessException, InstantiationException,
+							InvocationTargetException {
+								encoder(varname, dblMetaphone);
+							}
+
+							/**
+							* Method that returns a Daitch Mokotoff Soundex encoded string
+							* @param varname A variable name to use when initializing the variable
+							* @throws ClassNotFoundException Error thrown if the codec class is not
+							* found
+							* @throws NoSuchMethodException Error thrown if the codec class is not
+							* found (each of the classes implements the method encode that accepts a
+							* string argument)
+							* @throws IllegalAccessException Error thrown by the reflections
+							* implementation
+							* @throws InstantiationException Error thrown if there is an issue
+							* creating a new instance of the class object
+							* @throws InvocationTargetException Error thrown if there is an issue
+							* invoking the encode method of the object
+							*/
+							public void daitchMokotoff(String varname)
+							throws ClassNotFoundException, NoSuchMethodException,
+							IllegalAccessException, InstantiationException,
+							InvocationTargetException {
+								encoder(varname, dmSoundex);
+							}
+
+							/**
+							* Method that returns a Cologne Phonetic Encoded string
+							* @param varname A variable name to use when initializing the variable
+							* @throws ClassNotFoundException Error thrown if the codec class is not
+							* found
+							* @throws NoSuchMethodException Error thrown if the codec class is not
+							* found (each of the classes implements the method encode that accepts a
+							* string argument)
+							* @throws IllegalAccessException Error thrown by the reflections
+							* implementation
+							* @throws InstantiationException Error thrown if there is an issue
+							* creating a new instance of the class object
+							* @throws InvocationTargetException Error thrown if there is an issue
+							* invoking the encode method of the object
+							*/
+							public void koln(String varname)
+							throws ClassNotFoundException, NoSuchMethodException,
+							IllegalAccessException, InstantiationException,
+							InvocationTargetException {
+								encoder(varname, koln);
+							}
+
+							/**
+							* Method that returns a Caverphone v 1.0 Encoded String
+							* @param varname A variable name to use when initializing the variable
+							* @throws ClassNotFoundException Error thrown if the codec class is not
+							* found
+							* @throws NoSuchMethodException Error thrown if the codec class is not
+							* found (each of the classes implements the method encode that accepts a
+							* string argument)
+							* @throws IllegalAccessException Error thrown by the reflections
+							* implementation
+							* @throws InstantiationException Error thrown if there is an issue
+							* creating a new instance of the class object
+							* @throws InvocationTargetException Error thrown if there is an issue
+							* invoking the encode method of the object
+							*/
+							public void caverphone1(String varname)
+							throws ClassNotFoundException, NoSuchMethodException,
+							IllegalAccessException, InstantiationException,
+							InvocationTargetException {
+								encoder(varname, cav1);
+							}
+
+							/**
+							* Method that returns a Caverphone v 2.0 Encoded String
+							* @param varname A variable name to use when initializing the variable
+							* @throws ClassNotFoundException Error thrown if the codec class is not
+							* found
+							* @throws NoSuchMethodException Error thrown if the codec class is not
+							* found (each of the classes implements the method encode that accepts a
+							* string argument)
+							* @throws IllegalAccessException Error thrown by the reflections
+							* implementation
+							* @throws InstantiationException Error thrown if there is an issue
+							* creating a new instance of the class object
+							* @throws InvocationTargetException Error thrown if there is an issue
+							* invoking the encode method of the object
+							*/
+							public void caverphone2(String varname)
+							throws ClassNotFoundException, NoSuchMethodException,
+							IllegalAccessException, InstantiationException,
+							InvocationTargetException {
+								encoder(varname, cav2);
+							}
+
+							/**
+							* Method used to dynamically encode the string using the appropriate
+							* algorthem
+							* @param varname The variable name to push the results into
+							* @param clsName The name of the class to use for the encoding
+							* @throws ClassNotFoundException Error thrown if the codec class is not
+							* found
+							* @throws NoSuchMethodException Error thrown if the codec class is not
+							* found (each of the classes implements the method encode that accepts a
+							* string argument)
+							* @throws IllegalAccessException Error thrown by the reflections
+							* implementation
+							* @throws InstantiationException Error thrown if there is an issue
+							* creating a new instance of the class object
+							* @throws InvocationTargetException Error thrown if there is an issue
+							* invoking the encode method of the object
+							*/
+							public void encoder(String varname, String clsName)
+							throws ClassNotFoundException, NoSuchMethodException,
+							IllegalAccessException, InstantiationException,
+							InvocationTargetException {
+
+								if (!varname.isEmpty()) {
+
+									// Creates the caverphone variable
+									Data.addVarStr(varname, 5);
+
+									// Get the variable index value for the variable used to store the
+									Integer newvaridx = Data.getVarIndex(varname);
+
+									// Loop over observations
+									for (Number i : this.metaData.getObsindex()) {
+
+										// Build a string with values from varlist
+										StringJoiner s = new StringJoiner(" ");
+
+										// Loops over the variable list
+										for (Integer j : this.metaData.getVarindex()) {
+
+											// Adds string data to the string
+											s.add(Data.getStr(j, i.longValue()));
+
+										} // Ends loop over the string
+
+										// Initializes new class object based on the static names
+										Class<?> cls = Class.forName(clsName);
+
+										// Initializes a new object of that class
+										Object enc = cls.newInstance();
+
+										// gets the method used for encoding the string
+										Method getString = cls.getDeclaredMethod("encode",
+										Class.forName("java.lang.String"));
+
+										// Encodes the string value and returns the caverphone 1 string
+										Data.storeStr(newvaridx, i.longValue(),
+										(String) getString.invoke(enc, s.toString()));
+
+									} // End Loop over observations
+
+								} // End IF Block for valid case
+
+							} // End of Method declaration
+
+						} // End of Class declaration
+					</script>
+					</code>
+				</pre>
+				<aside class="notes">
+					<ul>
+						<li>I'll show a use of reflection for method dispatch that saved a fair amount additional effort</li>
+						<li>Here is what would have needed to take place in the body of each method without using any form of metaprogramming:</li>
+						<ul>
+							<li>Instantiate the object for the specific string encoding</li>
+							<li>Add the variable to Stata</li>
+							<li>Get the variable index for the new variable from Stata</li>
+							<li>Create a string joiner for the observation</li>
+							<li>Loop over the user specified variables to construct the string over one or more variables</li>
+							<li>Call the method that returns the phonetic encoding on the string and insert back into Stata</li>
+						</ul>
+						<li>Instead, each method calls a single meta method and passes a class name to it along with the name for the new variable.</li>
+						<li>The meta method uses a concept called reflection to instantiate which ever type of object is needed and to identify and call the appropriate method on that object to encode the string.</li>
+					</ul>
+				</aside>
+			</section>
+			-->
+		</section>
+		<section>
+			<section data-autoslide="3500">
+				<h2>Why you should care</h2>
+			</section>
+			<section>
+				<ul>
+					<li>Abstraction</li>
+					<li>Time Savings</li>
+					<li>Automation/Reproducibility</li>
+				</ul>
+				<aside class="notes">
+					<ul>
+						<li>Sometimes it is better to solve a slightly more abstract problem, than the specific concrete instance at hand.</li>
+						<li>Metaprogramming is a great solution when there is a higher level abstraction that can be solved easily.</li>
+						<li>Writing distinct programs for all possible scenarios is time-consuming.</li>
+						<li>If there are several similar challenges you face, a metaprogram can make it easier to deal with all of them simultaneously.</li>
+						<li>A great benefit of programming in general is reproducibility.</li>
+						<li>Why bother writing out scripts to compile and clean up LaTeX code, if you can write a program to do all of it for you?</li>
+					</ul>
+				</aside>
+			</section>
+			<section>
+				<h2>Remember</h2>
+				<ul>
+					<li>Programs that write or manipulate other programs</li>
+					<li>Use macros and Mata strings variables</li>
+					<li>Proper use = reduced time and effort</li>
+				</ul>
+				<aside class="notes">
+					<ul>
+						<li>These are the big takeaway points they should leave with</li>
+						<li></li>
+						<li></li>
+					</ul>
+				</aside>
+			</section>
+		</section>
+	</div>
+</div>
+<script src="dist/reveal.js"></script>
+<script src="plugin/zoom/zoom.js"></script>
+<script src="plugin/notes/notes.js"></script>
+<script src="plugin/search/search.js"></script>
+<script src="plugin/markdown/markdown.js"></script>
+<script src="plugin/highlight/highlight.js"></script>
+<script>
+	// Also available as an ES module, see:
+	// https://revealjs.com/initialization/
+	Reveal.initialize({
+		controls: true,
+		progress: true,
+		center: true,
+		hash: true,
+		// Learn about plugins: https://revealjs.com/plugins/
+		plugins: [ RevealZoom, RevealNotes, RevealSearch, RevealMarkdown, RevealHighlight ]
+	});
+
+</script>
+
+</body>
+</html>
