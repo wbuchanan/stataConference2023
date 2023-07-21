@@ -11,6 +11,9 @@ metaprogramming in Stata.
 Code examples are embedded in the slides and some examples, and output, are included here. Following the presentation, 
 I will add some additional slides that I am excluding from the talk to stay within the time allotted.  
 
+## Easter Eggs
+I had removed a couple of slides prior to the talk for timing purposes.  These slides are now available which show another
+couple of examples of using metaprogramming in different ways.  
 
 # LICENSE
 Because I fork the [reveal.js](https://github.com/hakimel/reveal.js/) source to generate my slides, I am including the 
